@@ -5,6 +5,8 @@ import (
 
 	"github.com/ChukwukaRosemary23/flowboard-backend/config"
 	"github.com/ChukwukaRosemary23/flowboard-backend/internal/database"
+	"github.com/ChukwukaRosemary23/flowboard-backend/internal/routes"
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 )
 
@@ -25,7 +27,15 @@ func main() {
 	// Initialize Gin router
 	router := gin.Default()
 
-	// Test route
+	// Setup CORS (allow frontend to connect)
+	router.Use(cors.New(cors.Config{
+		AllowOrigins:     []string{"http://localhost:3000", "http://localhost:5173"}, // React dev servers
+		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
+		AllowCredentials: true,
+	}))
+
+	// Health check route
 	router.GET("/ping", func(c *gin.Context) {
 		c.JSON(200, gin.H{
 			"message": "pong",
@@ -33,10 +43,25 @@ func main() {
 		})
 	})
 
+	// Setup API routes
+	routes.SetupRoutes(router)
+
 	// Start server
 	serverAddr := ":" + cfg.Port
 	log.Printf("🚀 Server starting on http://localhost%s\n", serverAddr)
 	log.Printf("📊 Environment: %s\n", cfg.Env)
+	log.Println("📚 API Endpoints:")
+	log.Println("   Auth:")
+	log.Println("     POST   /api/v1/auth/register    - Register new user")
+	log.Println("     POST   /api/v1/auth/login       - Login user")
+	log.Println("   User:")
+	log.Println("     GET    /api/v1/me               - Get current user")
+	log.Println("   Boards:")
+	log.Println("     POST   /api/v1/boards           - Create board")
+	log.Println("     GET    /api/v1/boards           - Get all boards")
+	log.Println("     GET    /api/v1/boards/:id       - Get single board")
+	log.Println("     PUT    /api/v1/boards/:id       - Update board")
+	log.Println("     DELETE /api/v1/boards/:id       - Delete board")
 
 	if err := router.Run(serverAddr); err != nil {
 		log.Fatal("Failed to start server:", err)
