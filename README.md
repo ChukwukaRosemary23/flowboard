@@ -1,6 +1,7 @@
 FlowBoard - Task Management System
 A modern, real-time task management application inspired by Trello. Built with Go, PostgreSQL, and React.
 ![FlowBoard Logo](docs/images/flowboard-logo.png)
+
 🚀 Features
 - **User Authentication** - Secure JWT-based authentication
 - **Board Management** - Create and organize multiple project boards
