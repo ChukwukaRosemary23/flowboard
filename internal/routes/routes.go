@@ -11,14 +11,14 @@ func SetupRoutes(router *gin.Engine) {
 	// API v1 group
 	api := router.Group("/api/v1")
 	{
-		// Public routes (no authentication required)
+		// Public routes
 		auth := api.Group("/auth")
 		{
 			auth.POST("/register", handlers.Register)
 			auth.POST("/login", handlers.Login)
 		}
 
-		// Protected routes (authentication required)
+		// Protected routes
 		protected := api.Group("")
 		protected.Use(middleware.AuthRequired())
 		{
@@ -39,27 +39,39 @@ func SetupRoutes(router *gin.Engine) {
 			// Board routes
 			boards := protected.Group("/boards")
 			{
-				boards.POST("", handlers.CreateBoard)       // Create board
-				boards.GET("", handlers.GetBoards)          // Get all user's boards
-				boards.GET("/:id", handlers.GetBoard)       // Get single board
-				boards.PUT("/:id", handlers.UpdateBoard)    // Update board
-				boards.PATCH("/:id", handlers.UpdateBoard)  // Update board (alternative)
-				boards.DELETE("/:id", handlers.DeleteBoard) // Delete board
+				boards.POST("", handlers.CreateBoard)
+				boards.GET("", handlers.GetBoards)
+				boards.GET("/:id", handlers.GetBoard)
+				boards.PUT("/:id", handlers.UpdateBoard)
+				boards.PATCH("/:id", handlers.UpdateBoard)
+				boards.DELETE("/:id", handlers.DeleteBoard)
 			}
 
 			// List routes
 			lists := protected.Group("/lists")
 			{
-				lists.POST("", handlers.CreateList)              // Create list
-				lists.GET("/board/:board_id", handlers.GetLists) // Get all lists in a board (CHANGED!)
-				lists.GET("/:id", handlers.GetList)              // Get single list
-				lists.PUT("/:id", handlers.UpdateList)           // Update list
-				lists.PATCH("/:id", handlers.UpdateList)         // Update list
-				lists.POST("/:id/move", handlers.MoveList)       // Move list (reorder)
-				lists.DELETE("/:id", handlers.DeleteList)        // Delete list
+				lists.POST("", handlers.CreateList)
+				lists.GET("/board/:board_id", handlers.GetLists)
+				lists.GET("/:id", handlers.GetList)
+				lists.PUT("/:id", handlers.UpdateList)
+				lists.PATCH("/:id", handlers.UpdateList)
+				lists.POST("/:id/move", handlers.MoveList)
+				lists.DELETE("/:id", handlers.DeleteList)
 			}
 
-			// We'll add card routes here later
+			// Card routes
+			cards := protected.Group("/cards")
+			{
+				cards.POST("", handlers.CreateCard)            // Create card
+				cards.GET("/list/:list_id", handlers.GetCards) // Get all cards in list
+				cards.GET("/:id", handlers.GetCard)            // Get single card
+				cards.PUT("/:id", handlers.UpdateCard)         // Update card
+				cards.PATCH("/:id", handlers.UpdateCard)       // Update card
+				cards.POST("/:id/move", handlers.MoveCard)     // Move card (drag-and-drop!)
+				cards.DELETE("/:id", handlers.DeleteCard)      // Delete card
+			}
+
+			// We'll add comment, label, attachment routes later
 		}
 	}
 }

@@ -70,6 +70,14 @@ func main() {
 	log.Println("     POST   /api/v1/lists/:id/move        - Move/reorder list")
 	log.Println("     DELETE /api/v1/lists/:id             - Delete list")
 
+	log.Println("   Cards:")
+	log.Println("     POST   /api/v1/cards                 - Create card")
+	log.Println("     GET    /api/v1/cards/list/:id        - Get all cards in list")
+	log.Println("     GET    /api/v1/cards/:id             - Get single card")
+	log.Println("     PUT    /api/v1/cards/:id             - Update card")
+	log.Println("     POST   /api/v1/cards/:id/move        - Move card (drag-and-drop)")
+	log.Println("     DELETE /api/v1/cards/:id             - Delete card")
+
 	if err := router.Run(serverAddr); err != nil {
 		log.Fatal("Failed to start server:", err)
 	}
