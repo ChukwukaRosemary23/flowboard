@@ -62,16 +62,26 @@ func SetupRoutes(router *gin.Engine) {
 			// Card routes
 			cards := protected.Group("/cards")
 			{
-				cards.POST("", handlers.CreateCard)            // Create card
-				cards.GET("/list/:list_id", handlers.GetCards) // Get all cards in list
-				cards.GET("/:id", handlers.GetCard)            // Get single card
-				cards.PUT("/:id", handlers.UpdateCard)         // Update card
-				cards.PATCH("/:id", handlers.UpdateCard)       // Update card
-				cards.POST("/:id/move", handlers.MoveCard)     // Move card (drag-and-drop!)
-				cards.DELETE("/:id", handlers.DeleteCard)      // Delete card
+				cards.POST("", handlers.CreateCard)
+				cards.GET("/list/:list_id", handlers.GetCards)
+				cards.GET("/:id", handlers.GetCard)
+				cards.PUT("/:id", handlers.UpdateCard)
+				cards.PATCH("/:id", handlers.UpdateCard)
+				cards.POST("/:id/move", handlers.MoveCard)
+				cards.DELETE("/:id", handlers.DeleteCard)
 			}
 
-			// We'll add comment, label, attachment routes later
+			// Comment routes
+			comments := protected.Group("/comments")
+			{
+				comments.POST("/card/:card_id", handlers.CreateComment) // Create comment
+				comments.GET("/card/:card_id", handlers.GetComments)    // Get all comments
+				comments.PUT("/:id", handlers.UpdateComment)            // Update comment
+				comments.PATCH("/:id", handlers.UpdateComment)          // Update comment
+				comments.DELETE("/:id", handlers.DeleteComment)         // Delete comment
+			}
+
+			// We'll add label routes next!
 		}
 	}
 }
