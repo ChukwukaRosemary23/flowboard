@@ -84,6 +84,19 @@ func main() {
 	log.Println("     PUT    /api/v1/comments/:id         - Update comment")
 	log.Println("     DELETE /api/v1/comments/:id         - Delete comment")
 
+	log.Println("   Labels:")
+	log.Println("     POST   /api/v1/labels/board/:id       - Create label for board")
+	log.Println("     GET    /api/v1/labels/board/:id       - Get all labels in board")
+	log.Println("     PUT    /api/v1/labels/:id             - Update label")
+	log.Println("     DELETE /api/v1/labels/:id             - Delete label")
+	log.Println("     POST   /api/v1/labels/card/:id        - Add label to card")
+	log.Println("     DELETE /api/v1/labels/card/:id/:label_id- Remove label from card")
+
+	log.Println("   Card Members:")
+	log.Println("     POST   /api/v1/card-members/card/:id           - Assign member to card")
+	log.Println("     GET    /api/v1/card-members/card/:id           - Get card members")
+	log.Println("     DELETE /api/v1/card-members/card/:id/member/:id - Unassign member")
+
 	if err := router.Run(serverAddr); err != nil {
 		log.Fatal("Failed to start server:", err)
 	}

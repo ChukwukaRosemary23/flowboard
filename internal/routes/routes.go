@@ -81,7 +81,26 @@ func SetupRoutes(router *gin.Engine) {
 				comments.DELETE("/:id", handlers.DeleteComment)         // Delete comment
 			}
 
-			// We'll add label routes next!
+			// Label routes
+			labels := protected.Group("/labels")
+			{
+				labels.POST("/board/:board_id", handlers.CreateLabel)                   // Create label for board
+				labels.GET("/board/:board_id", handlers.GetLabels)                      // Get all labels in board
+				labels.PUT("/:id", handlers.UpdateLabel)                                // Update label
+				labels.PATCH("/:id", handlers.UpdateLabel)                              // Update label
+				labels.DELETE("/:id", handlers.DeleteLabel)                             // Delete label
+				labels.POST("/card/:card_id", handlers.AddLabelToCard)                  // Add label to card
+				labels.DELETE("/card/:card_id/:label_id", handlers.RemoveLabelFromCard) // Remove label from card
+			}
+
+			// Card Member routes (who's assigned to cards)
+			cardMembers := protected.Group("/card-members")
+			{
+				cardMembers.POST("/card/:card_id", handlers.AssignMemberToCard)                         // Assign member
+				cardMembers.GET("/card/:card_id", handlers.GetCardMembers)                              // Get all members
+				cardMembers.DELETE("/card/:card_id/member/:member_id", handlers.UnassignMemberFromCard) // Unassign
+			}
+
 		}
 	}
 }
