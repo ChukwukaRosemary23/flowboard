@@ -5,6 +5,7 @@ import (
 
 	"github.com/ChukwukaRosemary23/flowboard-backend/internal/database"
 	"github.com/ChukwukaRosemary23/flowboard-backend/internal/models"
+	"github.com/ChukwukaRosemary23/flowboard-backend/internal/utils"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )
@@ -53,6 +54,9 @@ func CreateCard(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create card"})
 		return
 	}
+
+	// Log activity
+	utils.LogActivity("created_card", "card", card.ID, list.Board.ID, userID, card.Title, nil)
 
 	c.JSON(http.StatusCreated, CardResponse{
 		ID:          card.ID,

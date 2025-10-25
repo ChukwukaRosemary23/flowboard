@@ -68,6 +68,7 @@ func runMigrations() error {
 		&models.Attachment{},
 		&models.CardMember{},
 		&models.CardLabel{},
+		&models.Activity{},
 	)
 
 	if err != nil {

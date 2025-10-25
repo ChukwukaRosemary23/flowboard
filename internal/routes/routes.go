@@ -101,6 +101,20 @@ func SetupRoutes(router *gin.Engine) {
 				cardMembers.DELETE("/card/:card_id/member/:member_id", handlers.UnassignMemberFromCard) // Unassign
 			}
 
+			// Search routes
+			search := protected.Group("/search")
+			{
+				search.GET("/cards", handlers.SearchCards)         // Search/filter cards
+				search.GET("/overdue", handlers.GetOverdueCards)   // Get overdue cards
+				search.GET("/upcoming", handlers.GetUpcomingCards) // Get upcoming cards (next 7 days)
+
+				// Activity routes
+				activities := protected.Group("/activities")
+				{
+					activities.GET("/board/:board_id", handlers.GetBoardActivities) // Get board activities
+					activities.GET("/me", handlers.GetUserActivities)               // Get my activities
+				}
+			}
 		}
 	}
 }

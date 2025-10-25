@@ -97,6 +97,15 @@ func main() {
 	log.Println("     GET    /api/v1/card-members/card/:id           - Get card members")
 	log.Println("     DELETE /api/v1/card-members/card/:id/member/:id - Unassign member")
 
+	log.Println("   Search:")
+	log.Println("     GET    /api/v1/search/cards          - Search & filter cards")
+	log.Println("     GET    /api/v1/search/overdue        - Get overdue cards")
+	log.Println("     GET    /api/v1/search/upcoming       - Get upcoming cards (7 days)")
+
+	log.Println("   Activities:")
+	log.Println("     GET    /api/v1/activities/board/:id    - Get board activity log")
+	log.Println("     GET    /api/v1/activities/me           - Get my recent activities")
+
 	if err := router.Run(serverAddr); err != nil {
 		log.Fatal("Failed to start server:", err)
 	}
