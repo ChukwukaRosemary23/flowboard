@@ -27,7 +27,7 @@ function PricingPage() {
               <h3 className="text-2xl font-bold text-gray-900 mb-2">Free</h3>
               <p className="text-gray-600 mb-6">For individuals and small teams</p>
               <p className="text-5xl font-bold text-gray-900 mb-8">
-                $0<span className="text-xl text-gray-600">/month</span>
+                #0<span className="text-xl text-gray-600">/month</span>
               </p>
               <ul className="space-y-4 mb-8">
                 <li className="flex items-start">
@@ -67,7 +67,7 @@ function PricingPage() {
               <h3 className="text-2xl font-bold text-white mb-2">Premium</h3>
               <p className="text-blue-100 mb-6">For growing teams</p>
               <p className="text-5xl font-bold text-white mb-8">
-                $10<span className="text-xl text-blue-100">/user/month</span>
+                #10000<span className="text-xl text-blue-100">/user/month</span>
               </p>
               <ul className="space-y-4 mb-8">
                 <li className="flex items-start">
