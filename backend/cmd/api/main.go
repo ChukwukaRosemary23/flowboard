@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"os"
 	"time"
 
 	"github.com/ChukwukaRosemary23/flowboard-backend/config"
@@ -41,10 +42,25 @@ func main() {
 	// Serve uploaded files
 	router.Static("/uploads", "./uploads")
 
-	// Setup CORS (allow frontend to connect) - FIXED!
+	// Setup CORS (allow frontend to connect)
+	allowedOrigins := []string{
+		"http://localhost:3000",
+		"http://localhost:3001",
+		"http://localhost:5173",
+		"http://127.0.0.1:3000",
+		"http://127.0.0.1:3001",
+		"http://127.0.0.1:5173",
+	}
+
+	// Add production frontend URL from environment variable
+	frontendURL := os.Getenv("FRONTEND_URL")
+	if frontendURL != "" {
+		allowedOrigins = append(allowedOrigins, frontendURL)
+		log.Printf("✅ Added frontend URL to CORS: %s", frontendURL)
+	}
+
 	router.Use(cors.New(cors.Config{
-		// AllowOrigins:     []string{"http://localhost:3000", "http://localhost:5173", "http://127.0.0.1:3000", "http://127.0.0.1:5173"},
-		AllowOrigins:     []string{"http://localhost:3000", "http://localhost:3001", "http://localhost:5173", "http://127.0.0.1:3000", "http://127.0.0.1:3001", "http://127.0.0.1:5173"},
+		AllowOrigins:     allowedOrigins,
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization", "Accept"},
 		ExposeHeaders:    []string{"Content-Length"},
@@ -63,11 +79,18 @@ func main() {
 	// Setup API routes (pass hub)
 	routes.SetupRoutes(router, hub)
 
-	// Start server
-	serverAddr := ":" + cfg.Port
-	log.Printf("🚀 Server starting on http://localhost%s\n", serverAddr)
+	// Get port from environment variable (Render uses this)
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = cfg.Port // Fallback to config (local development)
+	}
+
+	serverAddr := ":" + port
+	log.Printf("🚀 Server starting on port %s\n", port)
 	log.Printf("📊 Environment: %s\n", cfg.Env)
 	log.Println("📚 API Endpoints:")
+	log.Println("   Health Check:")
+	log.Println("     GET    /ping                         - Health check")
 	log.Println("   WebSocket:")
 	log.Println("     GET    /api/v1/ws?board_id=X         - WebSocket connection")
 	log.Println("   Auth:")

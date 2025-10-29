@@ -3,6 +3,7 @@ package database
 import (
 	"fmt"
 	"log"
+	"os"
 
 	"github.com/ChukwukaRosemary23/flowboard-backend/config"
 	"github.com/ChukwukaRosemary23/flowboard-backend/internal/models"
@@ -15,15 +16,27 @@ var DB *gorm.DB
 
 // ConnectDatabase connects to PostgreSQL and runs migrations
 func ConnectDatabase(cfg *config.Config) error {
-	// Build connection string
-	dsn := fmt.Sprintf(
-		"host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
-		cfg.DBHost,
-		cfg.DBPort,
-		cfg.DBUser,
-		cfg.DBPassword,
-		cfg.DBName,
-	)
+	var dsn string
+
+	// Check if DATABASE_URL exists (Render uses this)
+	databaseURL := os.Getenv("DATABASE_URL")
+
+	if databaseURL != "" {
+		// Use DATABASE_URL (for Render/production)
+		dsn = databaseURL
+		log.Println("📦 Using DATABASE_URL for connection")
+	} else {
+		// Use individual variables (for local development)
+		dsn = fmt.Sprintf(
+			"host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
+			cfg.DBHost,
+			cfg.DBPort,
+			cfg.DBUser,
+			cfg.DBPassword,
+			cfg.DBName,
+		)
+		log.Println("🏠 Using individual DB variables for connection")
+	}
 
 	// Set up GORM config
 	gormConfig := &gorm.Config{}
@@ -41,7 +54,6 @@ func ConnectDatabase(cfg *config.Config) error {
 
 	// Store in global variable
 	DB = database
-
 	log.Println("✅ Database connected successfully!")
 
 	// Run migrations (create tables)
