@@ -50,6 +50,7 @@ func main() {
 		"http://127.0.0.1:3000",
 		"http://127.0.0.1:3001",
 		"http://127.0.0.1:5173",
+		"https://myflowboard-a0anfobxt-chukwukarosemary23s-projects.vercel.app", // Added Vercel URL
 	}
 
 	// Add production frontend URL from environment variable
