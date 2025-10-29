@@ -1,6 +1,6 @@
 module github.com/ChukwukaRosemary23/flowboard-backend
 
-go 1.25.1
+ go 1.21
 
 require (
 	github.com/gin-contrib/cors v1.7.6
