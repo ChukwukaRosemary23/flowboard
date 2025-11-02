@@ -8,6 +8,50 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// // CreateBoard handles creating a new board
+// func CreateBoard(c *gin.Context) {
+// 	var req CreateBoardRequest
+
+// 	// Validate input
+// 	if err := c.ShouldBindJSON(&req); err != nil {
+// 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+// 		return
+// 	}
+
+// 	// Get user ID from context (set by auth middleware)
+// 	userID := c.GetUint("user_id")
+
+// 	// Set default background color if not provided
+// 	backgroundColor := req.BackgroundColor
+// 	if backgroundColor == "" {
+// 		backgroundColor = "#0079BF" // Trello blue
+// 	}
+
+// 	// Create board
+// 	board := models.Board{
+// 		Title:           req.Title,
+// 		Description:     req.Description,
+// 		BackgroundColor: backgroundColor,
+// 		OwnerID:         userID,
+// 	}
+
+// 	if err := database.DB.Create(&board).Error; err != nil {
+// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create board"})
+// 		return
+// 	}
+
+// 	// Return response
+// 	c.JSON(http.StatusCreated, BoardResponse{
+// 		ID:              board.ID,
+// 		Title:           board.Title,
+// 		Description:     board.Description,
+// 		BackgroundColor: board.BackgroundColor,
+// 		OwnerID:         board.OwnerID,
+// 		CreatedAt:       board.CreatedAt,
+// 		UpdatedAt:       board.UpdatedAt,
+// 	})
+// }
+
 // CreateBoard handles creating a new board
 func CreateBoard(c *gin.Context) {
 	var req CreateBoardRequest
@@ -40,7 +84,51 @@ func CreateBoard(c *gin.Context) {
 		return
 	}
 
-	// Return response
+	// Get the owner role
+	var ownerRole models.Role
+	if err := database.DB.Where("name = ?", "owner").First(&ownerRole).Error; err != nil {
+		// If role doesn't exist, still return the board but log the warning
+		c.JSON(http.StatusCreated, gin.H{
+			"board": BoardResponse{
+				ID:              board.ID,
+				Title:           board.Title,
+				Description:     board.Description,
+				BackgroundColor: board.BackgroundColor,
+				OwnerID:         board.OwnerID,
+				CreatedAt:       board.CreatedAt,
+				UpdatedAt:       board.UpdatedAt,
+			},
+			"warning": "Board created but owner role not assigned. Please run migrations.",
+		})
+		return
+	}
+
+	// Add creator as owner in board_members table
+	boardMember := models.BoardMember{
+		BoardID: board.ID,
+		UserID:  userID,
+		RoleID:  ownerRole.ID,
+		Status:  "active",
+	}
+
+	if err := database.DB.Create(&boardMember).Error; err != nil {
+		// Board was created, but membership failed - still return success
+		c.JSON(http.StatusCreated, gin.H{
+			"board": BoardResponse{
+				ID:              board.ID,
+				Title:           board.Title,
+				Description:     board.Description,
+				BackgroundColor: board.BackgroundColor,
+				OwnerID:         board.OwnerID,
+				CreatedAt:       board.CreatedAt,
+				UpdatedAt:       board.UpdatedAt,
+			},
+			"warning": "Board created but membership assignment failed",
+		})
+		return
+	}
+
+	// Success! Return the board
 	c.JSON(http.StatusCreated, BoardResponse{
 		ID:              board.ID,
 		Title:           board.Title,
