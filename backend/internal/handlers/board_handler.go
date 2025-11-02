@@ -140,12 +140,51 @@ func CreateBoard(c *gin.Context) {
 	})
 }
 
-// GetBoards returns all boards owned by the current user
+// // GetBoards returns all boards owned by the current user
+// func GetBoards(c *gin.Context) {
+// 	userID := c.GetUint("user_id")
+
+// 	var boards []models.Board
+// 	if err := database.DB.Where("owner_id = ?", userID).Order("created_at DESC").Find(&boards).Error; err != nil {
+// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch boards"})
+// 		return
+// 	}
+
+// 	// Convert to response format
+// 	response := make([]BoardResponse, len(boards))
+// 	for i, board := range boards {
+// 		response[i] = BoardResponse{
+// 			ID:              board.ID,
+// 			Title:           board.Title,
+// 			Description:     board.Description,
+// 			BackgroundColor: board.BackgroundColor,
+// 			OwnerID:         board.OwnerID,
+// 			CreatedAt:       board.CreatedAt,
+// 			UpdatedAt:       board.UpdatedAt,
+// 		}
+// 	}
+
+// 	c.JSON(http.StatusOK, gin.H{
+// 		"boards": response,
+// 		"count":  len(response),
+// 	})
+// }
+
+// GetBoards returns all boards the current user has access to
 func GetBoards(c *gin.Context) {
 	userID := c.GetUint("user_id")
 
 	var boards []models.Board
-	if err := database.DB.Where("owner_id = ?", userID).Order("created_at DESC").Find(&boards).Error; err != nil {
+
+	// Get all boards where user is a member (including owned boards)
+	err := database.DB.
+		Joins("JOIN board_members ON boards.id = board_members.board_id").
+		Where("board_members.user_id = ? AND board_members.status = ?", userID, "active").
+		Preload("Owner").
+		Order("boards.created_at DESC").
+		Find(&boards).Error
+
+	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch boards"})
 		return
 	}
