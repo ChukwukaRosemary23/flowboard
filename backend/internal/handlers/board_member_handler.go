@@ -21,21 +21,21 @@ func InviteMember(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	// Validate role exists (right after request validation)
 	var role models.Role
 	if err := database.DB.Where("name = ?", req.Role).First(&role).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Role not found"})
+		c.AbortWithStatusJSON(http.StatusNotFound, gin.H{"error": "Role not found"})
 		return
 	}
 
 	// Check if user exists
 	var user models.User
 	if err := database.DB.First(&user, req.UserID).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+		c.AbortWithStatusJSON(http.StatusNotFound, gin.H{"error": "User not found"})
 		return
 	}
 
@@ -43,7 +43,7 @@ func InviteMember(c *gin.Context) {
 	var existingMember models.BoardMember
 	err := database.DB.Where("board_id = ? AND user_id = ?", boardID, req.UserID).First(&existingMember).Error
 	if err == nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "User is already a member of this board"})
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "User is already a member of this board"})
 		return
 	}
 
@@ -59,7 +59,7 @@ func InviteMember(c *gin.Context) {
 	}
 
 	if err := database.DB.Create(&boardMember).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to add member"})
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "Failed to add member"})
 		return
 	}
 
@@ -84,13 +84,13 @@ func RemoveMember(c *gin.Context) {
 		First(&boardMember).Error
 
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Member not found"})
+		c.AbortWithStatusJSON(http.StatusNotFound, gin.H{"error": "Member not found"})
 		return
 	}
 
 	// Cannot remove owner
 	if boardMember.Role.Name == "owner" {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Cannot remove board owner"})
+		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Cannot remove board owner"})
 		return
 	}
 
@@ -112,14 +112,14 @@ func UpdateMemberRole(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	// Validate role exists (right after request validation)
 	var role models.Role
 	if err := database.DB.Where("name = ?", req.Role).First(&role).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Role not found"})
+		c.AbortWithStatusJSON(http.StatusNotFound, gin.H{"error": "Role not found"})
 		return
 	}
 
@@ -130,13 +130,13 @@ func UpdateMemberRole(c *gin.Context) {
 		First(&boardMember).Error
 
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Member not found"})
+		c.AbortWithStatusJSON(http.StatusNotFound, gin.H{"error": "Member not found"})
 		return
 	}
 
 	// Cannot change owner role
 	if boardMember.Role.Name == "owner" {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Cannot change owner role"})
+		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Cannot change owner role"})
 		return
 	}
 
