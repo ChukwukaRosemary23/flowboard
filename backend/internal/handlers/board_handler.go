@@ -6,51 +6,8 @@ import (
 	"github.com/ChukwukaRosemary23/flowboard-backend/internal/database"
 	"github.com/ChukwukaRosemary23/flowboard-backend/internal/models"
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
-
-// // CreateBoard handles creating a new board
-// func CreateBoard(c *gin.Context) {
-// 	var req CreateBoardRequest
-
-// 	// Validate input
-// 	if err := c.ShouldBindJSON(&req); err != nil {
-// 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-// 		return
-// 	}
-
-// 	// Get user ID from context (set by auth middleware)
-// 	userID := c.GetUint("user_id")
-
-// 	// Set default background color if not provided
-// 	backgroundColor := req.BackgroundColor
-// 	if backgroundColor == "" {
-// 		backgroundColor = "#0079BF" // Trello blue
-// 	}
-
-// 	// Create board
-// 	board := models.Board{
-// 		Title:           req.Title,
-// 		Description:     req.Description,
-// 		BackgroundColor: backgroundColor,
-// 		OwnerID:         userID,
-// 	}
-
-// 	if err := database.DB.Create(&board).Error; err != nil {
-// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create board"})
-// 		return
-// 	}
-
-// 	// Return response
-// 	c.JSON(http.StatusCreated, BoardResponse{
-// 		ID:              board.ID,
-// 		Title:           board.Title,
-// 		Description:     board.Description,
-// 		BackgroundColor: board.BackgroundColor,
-// 		OwnerID:         board.OwnerID,
-// 		CreatedAt:       board.CreatedAt,
-// 		UpdatedAt:       board.UpdatedAt,
-// 	})
-// }
 
 // CreateBoard handles creating a new board
 func CreateBoard(c *gin.Context) {
@@ -71,104 +28,57 @@ func CreateBoard(c *gin.Context) {
 		backgroundColor = "#0079BF" // Trello blue
 	}
 
-	// Create board
-	board := models.Board{
-		Title:           req.Title,
-		Description:     req.Description,
-		BackgroundColor: backgroundColor,
-		OwnerID:         userID,
-	}
+	// Wrap all database operations in a transaction
+	err := database.DB.Transaction(func(tx *gorm.DB) error {
+		// Create board
+		board := models.Board{
+			Title:           req.Title,
+			Description:     req.Description,
+			BackgroundColor: backgroundColor,
+			OwnerID:         userID,
+		}
 
-	if err := database.DB.Create(&board).Error; err != nil {
+		if err := tx.Create(&board).Error; err != nil {
+			return err
+		}
+
+		// Get the owner role
+		var ownerRole models.Role
+		if err := tx.Where("name = ?", "owner").First(&ownerRole).Error; err != nil {
+			return err // Critical error - role missing means migrations not run
+		}
+
+		// Add creator as owner in board_members table
+		boardMember := models.BoardMember{
+			BoardID: board.ID,
+			UserID:  userID,
+			RoleID:  ownerRole.ID,
+			Status:  "active",
+		}
+
+		if err := tx.Create(&boardMember).Error; err != nil {
+			return err
+		}
+
+		// Success! Return the board
+		c.JSON(http.StatusCreated, BoardResponse{
+			ID:              board.ID,
+			Title:           board.Title,
+			Description:     board.Description,
+			BackgroundColor: board.BackgroundColor,
+			OwnerID:         board.OwnerID,
+			CreatedAt:       board.CreatedAt,
+			UpdatedAt:       board.UpdatedAt,
+		})
+
+		return nil
+	})
+
+	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create board"})
 		return
 	}
-
-	// Get the owner role
-	var ownerRole models.Role
-	if err := database.DB.Where("name = ?", "owner").First(&ownerRole).Error; err != nil {
-		// If role doesn't exist, still return the board but log the warning
-		c.JSON(http.StatusCreated, gin.H{
-			"board": BoardResponse{
-				ID:              board.ID,
-				Title:           board.Title,
-				Description:     board.Description,
-				BackgroundColor: board.BackgroundColor,
-				OwnerID:         board.OwnerID,
-				CreatedAt:       board.CreatedAt,
-				UpdatedAt:       board.UpdatedAt,
-			},
-			"warning": "Board created but owner role not assigned. Please run migrations.",
-		})
-		return
-	}
-
-	// Add creator as owner in board_members table
-	boardMember := models.BoardMember{
-		BoardID: board.ID,
-		UserID:  userID,
-		RoleID:  ownerRole.ID,
-		Status:  "active",
-	}
-
-	if err := database.DB.Create(&boardMember).Error; err != nil {
-		// Board was created, but membership failed - still return success
-		c.JSON(http.StatusCreated, gin.H{
-			"board": BoardResponse{
-				ID:              board.ID,
-				Title:           board.Title,
-				Description:     board.Description,
-				BackgroundColor: board.BackgroundColor,
-				OwnerID:         board.OwnerID,
-				CreatedAt:       board.CreatedAt,
-				UpdatedAt:       board.UpdatedAt,
-			},
-			"warning": "Board created but membership assignment failed",
-		})
-		return
-	}
-
-	// Success! Return the board
-	c.JSON(http.StatusCreated, BoardResponse{
-		ID:              board.ID,
-		Title:           board.Title,
-		Description:     board.Description,
-		BackgroundColor: board.BackgroundColor,
-		OwnerID:         board.OwnerID,
-		CreatedAt:       board.CreatedAt,
-		UpdatedAt:       board.UpdatedAt,
-	})
 }
-
-// // GetBoards returns all boards owned by the current user
-// func GetBoards(c *gin.Context) {
-// 	userID := c.GetUint("user_id")
-
-// 	var boards []models.Board
-// 	if err := database.DB.Where("owner_id = ?", userID).Order("created_at DESC").Find(&boards).Error; err != nil {
-// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch boards"})
-// 		return
-// 	}
-
-// 	// Convert to response format
-// 	response := make([]BoardResponse, len(boards))
-// 	for i, board := range boards {
-// 		response[i] = BoardResponse{
-// 			ID:              board.ID,
-// 			Title:           board.Title,
-// 			Description:     board.Description,
-// 			BackgroundColor: board.BackgroundColor,
-// 			OwnerID:         board.OwnerID,
-// 			CreatedAt:       board.CreatedAt,
-// 			UpdatedAt:       board.UpdatedAt,
-// 		}
-// 	}
-
-// 	c.JSON(http.StatusOK, gin.H{
-// 		"boards": response,
-// 		"count":  len(response),
-// 	})
-// }
 
 // GetBoards returns all boards the current user has access to
 func GetBoards(c *gin.Context) {

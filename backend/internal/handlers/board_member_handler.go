@@ -25,6 +25,13 @@ func InviteMember(c *gin.Context) {
 		return
 	}
 
+	// Validate role exists (right after request validation)
+	var role models.Role
+	if err := database.DB.Where("name = ?", req.Role).First(&role).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Role not found"})
+		return
+	}
+
 	// Check if user exists
 	var user models.User
 	if err := database.DB.First(&user, req.UserID).Error; err != nil {
@@ -36,14 +43,7 @@ func InviteMember(c *gin.Context) {
 	var existingMember models.BoardMember
 	err := database.DB.Where("board_id = ? AND user_id = ?", boardID, req.UserID).First(&existingMember).Error
 	if err == nil {
-		c.JSON(http.StatusConflict, gin.H{"error": "User is already a member of this board"})
-		return
-	}
-
-	// Get role ID
-	var role models.Role
-	if err := database.DB.Where("name = ?", req.Role).First(&role).Error; err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid role"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "User is already a member of this board"})
 		return
 	}
 
@@ -116,6 +116,13 @@ func UpdateMemberRole(c *gin.Context) {
 		return
 	}
 
+	// Validate role exists (right after request validation)
+	var role models.Role
+	if err := database.DB.Where("name = ?", req.Role).First(&role).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Role not found"})
+		return
+	}
+
 	// Find the board member
 	var boardMember models.BoardMember
 	err := database.DB.Preload("Role").
@@ -130,13 +137,6 @@ func UpdateMemberRole(c *gin.Context) {
 	// Cannot change owner role
 	if boardMember.Role.Name == "owner" {
 		c.JSON(http.StatusForbidden, gin.H{"error": "Cannot change owner role"})
-		return
-	}
-
-	// Get new role ID
-	var role models.Role
-	if err := database.DB.Where("name = ?", req.Role).First(&role).Error; err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid role"})
 		return
 	}
 

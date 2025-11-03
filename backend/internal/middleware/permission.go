@@ -38,7 +38,7 @@ func RequirePermission(permissionName string) gin.HandlerFunc {
 
 		if !hasPermission {
 			c.JSON(http.StatusForbidden, gin.H{
-				"error": "You don't have permission to perform this action",
+				"error": "You do not have permission to perform this action",
 			})
 			c.Abort()
 			return
@@ -73,7 +73,7 @@ func RequireOwner() gin.HandlerFunc {
 		permService := &services.PermissionService{}
 		if !permService.IsOwner(userID.(uint), uint(boardID)) {
 			c.JSON(http.StatusForbidden, gin.H{
-				"error": "Only board owner can perform this action",
+				"error": "You do not have permission to perform this action",
 			})
 			c.Abort()
 			return
@@ -108,7 +108,7 @@ func RequireAdmin() gin.HandlerFunc {
 		permService := &services.PermissionService{}
 		if !permService.IsAdmin(userID.(uint), uint(boardID)) {
 			c.JSON(http.StatusForbidden, gin.H{
-				"error": "Only board admin or owner can perform this action",
+				"error": "You do not have permission to perform this action",
 			})
 			c.Abort()
 			return
@@ -143,7 +143,7 @@ func RequireBoardAccess() gin.HandlerFunc {
 		permService := &services.PermissionService{}
 		if !permService.HasBoardAccess(userID.(uint), uint(boardID)) {
 			c.JSON(http.StatusForbidden, gin.H{
-				"error": "You don't have access to this board",
+				"error": "You do not have access to this board",
 			})
 			c.Abort()
 			return
