@@ -6,6 +6,7 @@ import (
 	"github.com/ChukwukaRosemary23/flowboard-backend/internal/database"
 	"github.com/ChukwukaRosemary23/flowboard-backend/internal/models"
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
 // CreateBoard handles creating a new board
@@ -14,7 +15,7 @@ func CreateBoard(c *gin.Context) {
 
 	// Validate input
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -27,38 +28,74 @@ func CreateBoard(c *gin.Context) {
 		backgroundColor = "#0079BF" // Trello blue
 	}
 
-	// Create board
-	board := models.Board{
-		Title:           req.Title,
-		Description:     req.Description,
-		BackgroundColor: backgroundColor,
-		OwnerID:         userID,
-	}
+	// Wrap all database operations in a transaction
+	err := database.DB.Transaction(func(tx *gorm.DB) error {
+		// Create board
+		board := models.Board{
+			Title:           req.Title,
+			Description:     req.Description,
+			BackgroundColor: backgroundColor,
+			OwnerID:         userID,
+		}
 
-	if err := database.DB.Create(&board).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create board"})
+		if err := tx.Create(&board).Error; err != nil {
+			return err
+		}
+
+		// Get the owner role
+		var ownerRole models.Role
+		if err := tx.Where("name = ?", "owner").First(&ownerRole).Error; err != nil {
+			return err // Critical error - role missing means migrations not run
+		}
+
+		// Add creator as owner in board_members table
+		boardMember := models.BoardMember{
+			BoardID: board.ID,
+			UserID:  userID,
+			RoleID:  ownerRole.ID,
+			Status:  "active",
+		}
+
+		if err := tx.Create(&boardMember).Error; err != nil {
+			return err
+		}
+
+		// Success! Return the board
+		c.JSON(http.StatusCreated, BoardResponse{
+			ID:              board.ID,
+			Title:           board.Title,
+			Description:     board.Description,
+			BackgroundColor: board.BackgroundColor,
+			OwnerID:         board.OwnerID,
+			CreatedAt:       board.CreatedAt,
+			UpdatedAt:       board.UpdatedAt,
+		})
+
+		return nil
+	})
+
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "Failed to create board"})
 		return
 	}
-
-	// Return response
-	c.JSON(http.StatusCreated, BoardResponse{
-		ID:              board.ID,
-		Title:           board.Title,
-		Description:     board.Description,
-		BackgroundColor: board.BackgroundColor,
-		OwnerID:         board.OwnerID,
-		CreatedAt:       board.CreatedAt,
-		UpdatedAt:       board.UpdatedAt,
-	})
 }
 
-// GetBoards returns all boards owned by the current user
+// GetBoards returns all boards the current user has access to
 func GetBoards(c *gin.Context) {
 	userID := c.GetUint("user_id")
 
 	var boards []models.Board
-	if err := database.DB.Where("owner_id = ?", userID).Order("created_at DESC").Find(&boards).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch boards"})
+
+	// Get all boards where user is a member (including owned boards)
+	err := database.DB.
+		Joins("JOIN board_members ON boards.id = board_members.board_id").
+		Where("board_members.user_id = ? AND board_members.status = ?", userID, "active").
+		Preload("Owner").
+		Order("boards.created_at DESC").
+		Find(&boards).Error
+
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch boards"})
 		return
 	}
 
@@ -92,7 +129,7 @@ func GetBoard(c *gin.Context) {
 	if err := database.DB.Where("id = ? AND owner_id = ?", boardID, userID).
 		Preload("Lists").
 		First(&board).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Board not found"})
+		c.AbortWithStatusJSON(http.StatusNotFound, gin.H{"error": "Board not found"})
 		return
 	}
 
@@ -129,14 +166,14 @@ func UpdateBoard(c *gin.Context) {
 
 	var req UpdateBoardRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	// Find board and verify ownership
 	var board models.Board
 	if err := database.DB.Where("id = ? AND owner_id = ?", boardID, userID).First(&board).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Board not found"})
+		c.AbortWithStatusJSON(http.StatusNotFound, gin.H{"error": "Board not found"})
 		return
 	}
 
@@ -153,7 +190,7 @@ func UpdateBoard(c *gin.Context) {
 
 	// Save changes
 	if err := database.DB.Save(&board).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update board"})
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "Failed to update board"})
 		return
 	}
 
@@ -177,13 +214,13 @@ func DeleteBoard(c *gin.Context) {
 	// Find board and verify ownership
 	var board models.Board
 	if err := database.DB.Where("id = ? AND owner_id = ?", boardID, userID).First(&board).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Board not found"})
+		c.AbortWithStatusJSON(http.StatusNotFound, gin.H{"error": "Board not found"})
 		return
 	}
 
 	// Soft delete (sets deleted_at timestamp)
 	if err := database.DB.Delete(&board).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete board"})
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete board"})
 		return
 	}
 
