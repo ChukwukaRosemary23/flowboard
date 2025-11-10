@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"os"
+	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -51,8 +53,12 @@ func makeRequest(method, endpoint string, body interface{}, token ...string) *HT
 	req, _ := http.NewRequest(method, BaseURL+endpoint, reqBody)
 	req.Header.Set("Content-Type", "application/json")
 
-	if len(token) > 0 && token[0] != "" {
-		req.Header.Set("Authorization", "Bearer "+token[0])
+	// Trim and validate token
+	if len(token) > 0 {
+		trimmedToken := strings.TrimSpace(token[0])
+		if len(trimmedToken) > 0 {
+			req.Header.Set("Authorization", "Bearer "+trimmedToken)
+		}
 	}
 
 	client := &http.Client{Timeout: 10 * time.Second}
@@ -74,16 +80,29 @@ func makeRequest(method, endpoint string, body interface{}, token ...string) *HT
 }
 
 // GenerateTestJWT creates a valid JWT token for testing
-func GenerateTestJWT(userID uint, username, email string) string {
+// expiryHours: token expiry in hours (default 24h if 0)
+func GenerateTestJWT(userID uint, username, email string, expiryHours ...int) string {
+	// Default expiry is 24 hours
+	expiry := 24
+	if len(expiryHours) > 0 && expiryHours[0] > 0 {
+		expiry = expiryHours[0]
+	}
+
 	claims := jwt.MapClaims{
 		"user_id":  userID,
 		"username": username,
 		"email":    email,
-		"exp":      time.Now().Add(time.Hour * 24).Unix(),
+		"exp":      time.Now().Add(time.Hour * time.Duration(expiry)).Unix(),
+	}
+
+	// Get JWT secret from env
+	jwtSecret := os.Getenv("JWT_SECRET")
+	if jwtSecret == "" {
+		jwtSecret = "test-secret-key-for-testing-only"
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	tokenString, _ := token.SignedString([]byte("test-secret-key-for-testing-only"))
+	tokenString, _ := token.SignedString([]byte(jwtSecret))
 
 	return tokenString
 }

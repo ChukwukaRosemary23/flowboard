@@ -1,6 +1,7 @@
 package tests
 
 import (
+	"os"
 	"time"
 
 	"github.com/ChukwukaRosemary23/flowboard-backend/internal/database"
@@ -16,7 +17,13 @@ var Factory = &FactoryHelper{}
 
 // CreateUser creates a user with random data
 func (f *FactoryHelper) CreateUser() *models.User {
-	hashedPassword, _ := bcrypt.GenerateFromPassword([]byte("password123"), bcrypt.DefaultCost)
+	// Get default test password from env
+	testPassword := os.Getenv("TEST_USER_PASSWORD")
+	if testPassword == "" {
+		testPassword = "password123"
+	}
+
+	hashedPassword, _ := bcrypt.GenerateFromPassword([]byte(testPassword), bcrypt.DefaultCost)
 
 	user := &models.User{
 		Username: faker.Username(),
@@ -30,6 +37,11 @@ func (f *FactoryHelper) CreateUser() *models.User {
 
 // CreateUserWithCredentials creates a user with specific credentials
 func (f *FactoryHelper) CreateUserWithCredentials(email, password string) *models.User {
+	// Validate password is not empty
+	if password == "" {
+		panic("Password cannot be empty")
+	}
+
 	hashedPassword, _ := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 
 	user := &models.User{
