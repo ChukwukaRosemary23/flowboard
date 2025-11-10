@@ -9,6 +9,9 @@ import (
 
 // SetupRoutes configures all API routes
 func SetupRoutes(router *gin.Engine, hub *ws.Hub) {
+	// Health check route (no authentication required)
+	router.GET("/health", handlers.HealthCheck)
+
 	// API v1 group
 	api := router.Group("/api/v1")
 	{

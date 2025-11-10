@@ -49,7 +49,7 @@ func TestMain(m *testing.M) {
 	seedRolesAndPermissions()
 
 	// Start HTTP server as subprocess
-	log.Println("🌐 Starting HTTP server on port 8083...")
+	log.Println("🌐 Starting HTTP server...")
 	serverCmd = exec.Command("go", "run", "cmd/api/main.go")
 	serverCmd.Env = append(os.Environ(), "ENV=test")
 
@@ -57,18 +57,13 @@ func TestMain(m *testing.M) {
 		log.Fatal("❌ Failed to start server:", err)
 	}
 
-	// Wait for server to be ready
+	// Wait for server to be ready with retry logic
 	log.Println("⏳ Waiting for server to be ready...")
-	time.Sleep(3 * time.Second)
-
-	// Check if server is responding
-	resp, err := http.Get("http://localhost:8083/ping")
-	if err != nil || resp.StatusCode != 200 {
-		log.Println("⚠️  Warning: Server may not be ready, but continuing...")
-	} else {
-		log.Println("✅ Server is ready!")
+	if !waitForServer(cfg.Port, 5, 3*time.Second) {
+		log.Fatal("❌ Server failed to start after 5 retries")
 	}
 
+	log.Println("✅ Server is ready!")
 	log.Println("🧪 Running tests...")
 
 	// Run tests
@@ -81,8 +76,42 @@ func TestMain(m *testing.M) {
 		log.Println("🛑 Server stopped")
 	}
 
+	// Rollback migrations (drop tables)
+	log.Println("🔄 Rolling back migrations...")
+	database.DB.Migrator().DropTable(
+		&models.BoardMember{},
+		&models.RolePermission{},
+		&models.Permission{},
+		&models.Role{},
+		&models.Card{},
+		&models.List{},
+		&models.Board{},
+		&models.User{},
+	)
+
 	log.Println("✅ Test environment cleaned up")
 	os.Exit(code)
+}
+
+// waitForServer checks if server is ready with retry logic
+func waitForServer(port string, maxRetries int, waitTime time.Duration) bool {
+	url := "http://localhost:" + port + "/health"
+
+	for i := 0; i < maxRetries; i++ {
+		log.Printf("⏳ Checking server health (attempt %d/%d)...", i+1, maxRetries)
+
+		resp, err := http.Get(url)
+		if err == nil && resp.StatusCode == 200 {
+			return true
+		}
+
+		if i < maxRetries-1 {
+			log.Printf("⏳ Server not ready, waiting %v before retry...", waitTime)
+			time.Sleep(waitTime)
+		}
+	}
+
+	return false
 }
 
 // seedRolesAndPermissions seeds the database with roles and permissions
