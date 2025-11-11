@@ -23,6 +23,8 @@ func main() {
 		log.Fatal("Failed to connect to database:", err)
 	}
 
+	database.SeedRolesAndPermissions()
+
 	// Create WebSocket hub
 	hub := ws.NewHub()
 	go hub.Run()

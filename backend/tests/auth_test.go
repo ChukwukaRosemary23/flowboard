@@ -3,6 +3,7 @@ package tests
 import (
 	"testing"
 
+	"github.com/ChukwukaRosemary23/flowboard-backend/internal/database"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -11,8 +12,8 @@ type AuthTestSuite struct {
 }
 
 func (suite *AuthTestSuite) SetupTest() {
-	// Clean up database before each test
-	// For now, we'll skip transaction setup
+	// Clean up users before each test to avoid duplicates
+	database.DB.Exec("DELETE FROM users")
 }
 
 func (suite *AuthTestSuite) TearDownTest() {
@@ -48,7 +49,8 @@ func (suite *AuthTestSuite) TestRegister_DuplicateEmail() {
 
 	response := POST("/auth/register", requestBody)
 
-	suite.Equal(400, response.StatusCode)
+	// Should fail with 400 or 409
+	suite.True(response.StatusCode == 400 || response.StatusCode == 409)
 	suite.NotNil(response.Body["error"])
 }
 

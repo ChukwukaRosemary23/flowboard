@@ -11,6 +11,7 @@ import (
 	"github.com/ChukwukaRosemary23/flowboard-backend/config"
 	"github.com/ChukwukaRosemary23/flowboard-backend/internal/database"
 	"github.com/ChukwukaRosemary23/flowboard-backend/internal/models"
+	"github.com/joho/godotenv"
 )
 
 var serverCmd *exec.Cmd
@@ -24,6 +25,11 @@ func TestMain(m *testing.M) {
 	// Change to backend directory to find .env.test
 	os.Chdir("..")
 
+	// Force load .env.test file
+	if err := godotenv.Load(".env.test"); err != nil {
+		log.Fatal("❌ Error loading .env.test file:", err)
+	}
+
 	cfg := config.LoadConfig()
 
 	// Connect to test database
@@ -32,13 +38,19 @@ func TestMain(m *testing.M) {
 		log.Fatal("❌ Failed to connect to test database:", err)
 	}
 
-	// Auto-migrate tables
+	// Auto-migrate tables (ALL models in correct order)
 	log.Println("🔄 Running database migrations...")
 	database.DB.AutoMigrate(
 		&models.User{},
 		&models.Board{},
 		&models.List{},
 		&models.Card{},
+		&models.Comment{},    // ← ADDED
+		&models.Label{},      // ← ADDED
+		&models.CardLabel{},  // ← ADDED
+		&models.CardMember{}, // ← ADDED
+		&models.Attachment{}, // ← ADDED
+		&models.Activity{},   // ← ADDED
 		&models.Role{},
 		&models.Permission{},
 		&models.RolePermission{},
@@ -76,13 +88,19 @@ func TestMain(m *testing.M) {
 		log.Println("🛑 Server stopped")
 	}
 
-	// Rollback migrations (drop tables)
+	// Rollback migrations (drop tables in reverse order)
 	log.Println("🔄 Rolling back migrations...")
 	database.DB.Migrator().DropTable(
 		&models.BoardMember{},
 		&models.RolePermission{},
 		&models.Permission{},
 		&models.Role{},
+		&models.Activity{},   // ← ADDED
+		&models.Attachment{}, // ← ADDED
+		&models.CardMember{}, // ← ADDED
+		&models.CardLabel{},  // ← ADDED
+		&models.Label{},      // ← ADDED
+		&models.Comment{},    // ← ADDED
 		&models.Card{},
 		&models.List{},
 		&models.Board{},

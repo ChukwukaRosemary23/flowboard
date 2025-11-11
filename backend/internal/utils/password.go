@@ -4,8 +4,8 @@ import "golang.org/x/crypto/bcrypt"
 
 // HashPassword hashes a plain text password
 func HashPassword(password string) (string, error) {
-	// Generate hash with cost 14 (good balance of security and speed)
-	bytes, err := bcrypt.GenerateFromPassword([]byte(password), 14)
+	// Use default cost (10) instead of 14 - much faster!
+	bytes, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	return string(bytes), err
 }
 
