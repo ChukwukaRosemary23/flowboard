@@ -51,12 +51,12 @@ func SetupRoutes(router *gin.Engine, hub *ws.Hub) {
 
 				// Board detail routes - require board access
 				boards.GET("/:id", middleware.RequireBoardAccess(), handlers.GetBoard)
-				boards.PUT("/:id", middleware.RequirePermission("edit_board"), handlers.UpdateBoard)
+				boards.PUT("/:id", middleware.RequirePermission("update_board"), handlers.UpdateBoard) // ← CHANGED
 				boards.DELETE("/:id", middleware.RequireOwner(), handlers.DeleteBoard)
 
 				// Board member management routes
 				boards.GET("/:id/members", middleware.RequireBoardAccess(), handlers.GetBoardMembers)
-				boards.POST("/:id/members", middleware.RequirePermission("manage_members"), handlers.InviteMember)
+				boards.POST("/:id/members", middleware.RequirePermission("invite_member"), handlers.InviteMember) // ← CHANGED
 				boards.DELETE("/:id/members/:user_id", middleware.RequirePermission("manage_members"), handlers.RemoveMember)
 				boards.PUT("/:id/members/:user_id/role", middleware.RequirePermission("manage_members"), handlers.UpdateMemberRole)
 			}

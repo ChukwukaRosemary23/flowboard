@@ -38,6 +38,24 @@ func TestMain(m *testing.M) {
 		log.Fatal("❌ Failed to connect to test database:", err)
 	}
 
+	// CLEAN UP OLD DATA BEFORE STARTING - Comprehensive cleanup
+	log.Println("🧹 Cleaning up old test data...")
+	database.DB.Exec("TRUNCATE TABLE activities CASCADE")
+	database.DB.Exec("TRUNCATE TABLE attachments CASCADE")
+	database.DB.Exec("TRUNCATE TABLE card_members CASCADE")
+	database.DB.Exec("TRUNCATE TABLE card_labels CASCADE")
+	database.DB.Exec("TRUNCATE TABLE comments CASCADE")
+	database.DB.Exec("TRUNCATE TABLE cards CASCADE")
+	database.DB.Exec("TRUNCATE TABLE labels CASCADE")
+	database.DB.Exec("TRUNCATE TABLE lists CASCADE")
+	database.DB.Exec("TRUNCATE TABLE board_members CASCADE")
+	database.DB.Exec("TRUNCATE TABLE boards CASCADE")
+	database.DB.Exec("TRUNCATE TABLE role_permissions CASCADE")
+	database.DB.Exec("TRUNCATE TABLE permissions CASCADE")
+	database.DB.Exec("TRUNCATE TABLE roles CASCADE")
+	database.DB.Exec("TRUNCATE TABLE users CASCADE")
+	log.Println("✅ Old test data cleaned")
+
 	// Auto-migrate tables (ALL models in correct order)
 	log.Println("🔄 Running database migrations...")
 	database.DB.AutoMigrate(
@@ -45,12 +63,12 @@ func TestMain(m *testing.M) {
 		&models.Board{},
 		&models.List{},
 		&models.Card{},
-		&models.Comment{},    // ← ADDED
-		&models.Label{},      // ← ADDED
-		&models.CardLabel{},  // ← ADDED
-		&models.CardMember{}, // ← ADDED
-		&models.Attachment{}, // ← ADDED
-		&models.Activity{},   // ← ADDED
+		&models.Comment{},
+		&models.Label{},
+		&models.CardLabel{},
+		&models.CardMember{},
+		&models.Attachment{},
+		&models.Activity{},
 		&models.Role{},
 		&models.Permission{},
 		&models.RolePermission{},
@@ -62,8 +80,30 @@ func TestMain(m *testing.M) {
 
 	// Start HTTP server as subprocess
 	log.Println("🌐 Starting HTTP server...")
+
+	// Capture server output to file for debugging
+	serverLogFile, err := os.Create("server_test.log")
+	if err != nil {
+		log.Fatal("Failed to create log file:", err)
+	}
+	defer func() {
+		time.Sleep(100 * time.Millisecond) // Give time for writes
+		serverLogFile.Close()
+	}()
+
 	serverCmd = exec.Command("go", "run", "cmd/api/main.go")
-	serverCmd.Env = append(os.Environ(), "ENV=test")
+	serverCmd.Env = append(os.Environ(),
+		"ENV=test",
+		"DB_NAME=flowboard_tests3",
+		"DB_HOST=localhost",
+		"DB_PORT=5432",
+		"DB_USER=postgres",
+		"DB_PASSWORD=Rose1234",
+		"PORT=8083",
+		"JWT_SECRET=68aea209f5a75004f288d289973933808d5adfd8184fb767ad3",
+	)
+	serverCmd.Stdout = serverLogFile
+	serverCmd.Stderr = serverLogFile
 
 	if err := serverCmd.Start(); err != nil {
 		log.Fatal("❌ Failed to start server:", err)
@@ -95,12 +135,12 @@ func TestMain(m *testing.M) {
 		&models.RolePermission{},
 		&models.Permission{},
 		&models.Role{},
-		&models.Activity{},   // ← ADDED
-		&models.Attachment{}, // ← ADDED
-		&models.CardMember{}, // ← ADDED
-		&models.CardLabel{},  // ← ADDED
-		&models.Label{},      // ← ADDED
-		&models.Comment{},    // ← ADDED
+		&models.Activity{},
+		&models.Attachment{},
+		&models.CardMember{},
+		&models.CardLabel{},
+		&models.Label{},
+		&models.Comment{},
 		&models.Card{},
 		&models.List{},
 		&models.Board{},

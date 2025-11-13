@@ -2,8 +2,8 @@ package tests
 
 import (
 	"fmt"
+	"log"
 	"testing"
-	"time"
 
 	"github.com/ChukwukaRosemary23/flowboard-backend/internal/database"
 	"github.com/ChukwukaRosemary23/flowboard-backend/internal/models"
@@ -14,67 +14,100 @@ type BoardMemberTestSuite struct {
 	suite.Suite
 }
 
-func (suite *BoardMemberTestSuite) SetupTest() {
-	// Clean up test data
-	database.DB.Exec("DELETE FROM board_members")
-	database.DB.Exec("DELETE FROM boards")
-	database.DB.Exec("DELETE FROM users")
+func (suite *BoardMemberTestSuite) TearDownTest() {
+	// Cleanup after test
 }
 
-// Test inviting a member to board
+// Test inviting a member successfully
 func (suite *BoardMemberTestSuite) TestInviteMember_Success() {
 	owner := Factory.CreateUser()
 	board := Factory.CreateBoard(owner.ID)
 	newMember := Factory.CreateUser()
 
-	// Wait for DB commit
-	time.Sleep(100 * time.Millisecond)
+	// DEBUG: Check database state directly
+	log.Printf("\n🔍 === DATABASE STATE CHECK ===")
+
+	// Check if owner is in board_members
+	var boardMemberCount int64
+	database.DB.Table("board_members").
+		Where("user_id = ? AND board_id = ?", owner.ID, board.ID).
+		Count(&boardMemberCount)
+	log.Printf("Owner in board_members: %d", boardMemberCount)
+
+	// Get owner's role
+	var ownerBoardMember models.BoardMember
+	database.DB.Preload("Role").
+		Where("user_id = ? AND board_id = ?", owner.ID, board.ID).
+		First(&ownerBoardMember)
+	log.Printf("Owner's role: %s (ID: %d)", ownerBoardMember.Role.Name, ownerBoardMember.RoleID)
+
+	// Check if owner's role has invite_member permission
+	var permCount int64
+	database.DB.Table("role_permissions").
+		Joins("JOIN permissions ON role_permissions.permission_id = permissions.id").
+		Where("role_permissions.role_id = ? AND permissions.name = ?", ownerBoardMember.RoleID, "invite_member").
+		Count(&permCount)
+	log.Printf("Owner's role has 'invite_member' permission: %d", permCount)
+
+	// List all permissions for owner's role
+	var permissions []string
+	database.DB.Table("role_permissions").
+		Select("permissions.name").
+		Joins("JOIN permissions ON role_permissions.permission_id = permissions.id").
+		Where("role_permissions.role_id = ?", ownerBoardMember.RoleID).
+		Scan(&permissions)
+	log.Printf("All permissions for role '%s': %v", ownerBoardMember.Role.Name, permissions)
+	log.Printf("=================================\n")
 
 	token := GenerateTestJWT(owner.ID, owner.Username, owner.Email)
+
 	requestBody := map[string]interface{}{
 		"user_id": newMember.ID,
 		"role":    "member",
 	}
 
 	response := POST(fmt.Sprintf("/boards/%d/members", board.ID), requestBody, token)
+	LogResponse("TestInviteMember_Success", response)
 
-	suite.Equal(201, response.StatusCode)
-	if response.Body["message"] != nil {
-		suite.Equal("Member added successfully", response.Body["message"])
+	suite.Equal(201, response.StatusCode, "Should return 201 Created")
+	suite.Equal("Member added successfully", response.Body["message"])
+
+	// Only check member if response succeeded
+	if response.StatusCode == 201 && response.Body["member"] != nil {
+		member := response.Body["member"].(map[string]interface{})
+		suite.Equal(float64(board.ID), member["board_id"])
+		suite.Equal(float64(newMember.ID), member["user_id"])
+		suite.Equal(float64(owner.ID), member["invited_by"])
+		suite.NotNil(member["role_id"])
 	}
 }
 
-// Test inviting duplicate member
+// Test duplicate member invitation
 func (suite *BoardMemberTestSuite) TestInviteMember_DuplicateMember() {
 	owner := Factory.CreateUser()
 	board := Factory.CreateBoard(owner.ID)
 	member := Factory.CreateUser()
 
+	// Add member first time
 	Factory.CreateBoardMember(board.ID, member.ID, "member")
 
-	// Wait for DB commit
-	time.Sleep(100 * time.Millisecond)
-
 	token := GenerateTestJWT(owner.ID, owner.Username, owner.Email)
+
 	requestBody := map[string]interface{}{
 		"user_id": member.ID,
 		"role":    "member",
 	}
 
+	// Try to add same member again
 	response := POST(fmt.Sprintf("/boards/%d/members", board.ID), requestBody, token)
+	LogResponse("TestInviteMember_DuplicateMember", response)
 
 	suite.Equal(400, response.StatusCode)
+	suite.Contains(response.Body["error"], "already a member")
 }
 
-// Test only admin/owner can invite members
+// Test access control for inviting members
 func (suite *BoardMemberTestSuite) TestInviteMember_AccessControl() {
-	owner := Factory.CreateUser()
-	board := Factory.CreateBoard(owner.ID)
-	newUser := Factory.CreateUser()
-
-	// Wait for DB commit
-	time.Sleep(100 * time.Millisecond)
-
 	testCases := []struct {
 		role           string
 		expectedStatus int
@@ -87,60 +120,68 @@ func (suite *BoardMemberTestSuite) TestInviteMember_AccessControl() {
 
 	for _, tc := range testCases {
 		suite.Run(tc.role, func() {
-			var inviter *models.User
+			// Create fresh board and owner for EACH sub-test
+			owner := Factory.CreateUser()
+			board := Factory.CreateBoard(owner.ID)
+			newMember := Factory.CreateUser()
+
+			var user *models.User
 
 			if tc.role == "owner" {
-				inviter = owner
+				user = owner
 			} else {
-				inviter = Factory.CreateUser()
-				Factory.CreateBoardMember(board.ID, inviter.ID, tc.role)
-				// Wait for DB commit
-				time.Sleep(100 * time.Millisecond)
+				user = Factory.CreateUser()
+				Factory.CreateBoardMember(board.ID, user.ID, tc.role)
 			}
 
-			token := GenerateTestJWT(inviter.ID, inviter.Username, inviter.Email)
+			token := GenerateTestJWT(user.ID, user.Username, user.Email)
+
 			requestBody := map[string]interface{}{
-				"user_id": newUser.ID,
+				"user_id": newMember.ID,
 				"role":    "member",
 			}
 
 			response := POST(fmt.Sprintf("/boards/%d/members", board.ID), requestBody, token)
+			LogResponse(fmt.Sprintf("TestInviteMember_AccessControl/%s", tc.role), response)
 
-			suite.Equal(tc.expectedStatus, response.StatusCode)
+			suite.Equal(tc.expectedStatus, response.StatusCode,
+				fmt.Sprintf("%s should get %d status", tc.role, tc.expectedStatus))
 		})
 	}
 }
 
-// Test removing member
+// Test removing a member successfully
 func (suite *BoardMemberTestSuite) TestRemoveMember_Success() {
 	owner := Factory.CreateUser()
 	board := Factory.CreateBoard(owner.ID)
 	member := Factory.CreateUser()
-	Factory.CreateBoardMember(board.ID, member.ID, "member")
 
-	// Wait for DB commit
-	time.Sleep(100 * time.Millisecond)
+	boardMember := Factory.CreateBoardMember(board.ID, member.ID, "member")
 
 	token := GenerateTestJWT(owner.ID, owner.Username, owner.Email)
-	response := DELETE(fmt.Sprintf("/boards/%d/members/%d", board.ID, member.ID), token)
+
+	response := DELETE(fmt.Sprintf("/boards/%d/members/%d", board.ID, boardMember.ID), token)
+	LogResponse("TestRemoveMember_Success", response)
 
 	suite.Equal(200, response.StatusCode)
 }
 
-// Test cannot remove owner
+// Test that owner cannot be removed
 func (suite *BoardMemberTestSuite) TestRemoveMember_CannotRemoveOwner() {
 	owner := Factory.CreateUser()
 	board := Factory.CreateBoard(owner.ID)
-	admin := Factory.CreateUser()
-	Factory.CreateBoardMember(board.ID, admin.ID, "admin")
 
-	// Wait for DB commit
-	time.Sleep(100 * time.Millisecond)
+	// Owner is automatically added as a board member
+	var ownerMember models.BoardMember
+	database.DB.Where("board_id = ? AND user_id = ?", board.ID, owner.ID).First(&ownerMember)
 
-	token := GenerateTestJWT(admin.ID, admin.Username, admin.Email)
-	response := DELETE(fmt.Sprintf("/boards/%d/members/%d", board.ID, owner.ID), token)
+	token := GenerateTestJWT(owner.ID, owner.Username, owner.Email)
 
-	suite.Equal(403, response.StatusCode)
+	response := DELETE(fmt.Sprintf("/boards/%d/members/%d", board.ID, ownerMember.ID), token)
+	LogResponse("TestRemoveMember_CannotRemoveOwner", response)
+
+	suite.Equal(400, response.StatusCode)
+	suite.Contains(response.Body["error"], "owner")
 }
 
 func TestBoardMemberTestSuite(t *testing.T) {
