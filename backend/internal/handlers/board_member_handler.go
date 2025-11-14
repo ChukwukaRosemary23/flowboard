@@ -74,13 +74,13 @@ func InviteMember(c *gin.Context) {
 
 // RemoveMember removes a user from a board
 func RemoveMember(c *gin.Context) {
-	boardID, _ := strconv.ParseUint(c.Param("id"), 10, 32)
-	userID, _ := strconv.ParseUint(c.Param("user_id"), 10, 32)
+	// boardID, _ := strconv.ParseUint(c.Param("id"), 10, 32)  //
+	memberID, _ := strconv.ParseUint(c.Param("member_id"), 10, 32)
 
 	// Find the board member
 	var boardMember models.BoardMember
 	err := database.DB.Preload("Role").
-		Where("board_id = ? AND user_id = ?", boardID, userID).
+		Where("id = ?", memberID).
 		First(&boardMember).Error
 
 	if err != nil {
@@ -90,7 +90,7 @@ func RemoveMember(c *gin.Context) {
 
 	// Cannot remove owner
 	if boardMember.Role.Name == "owner" {
-		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Cannot remove board owner"})
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Cannot remove board owner"})
 		return
 	}
 

@@ -60,15 +60,29 @@ func CreateBoard(c *gin.Context) {
 			return err
 		}
 
+		// // Success! Return the board
+		// c.JSON(http.StatusCreated, BoardResponse{
+		// 	ID:              board.ID,
+		// 	Title:           board.Title,
+		// 	Description:     board.Description,
+		// 	BackgroundColor: board.BackgroundColor,
+		// 	OwnerID:         board.OwnerID,
+		// 	CreatedAt:       board.CreatedAt,
+		// 	UpdatedAt:       board.UpdatedAt,
+		// })
+
 		// Success! Return the board
-		c.JSON(http.StatusCreated, BoardResponse{
-			ID:              board.ID,
-			Title:           board.Title,
-			Description:     board.Description,
-			BackgroundColor: board.BackgroundColor,
-			OwnerID:         board.OwnerID,
-			CreatedAt:       board.CreatedAt,
-			UpdatedAt:       board.UpdatedAt,
+		c.JSON(http.StatusCreated, gin.H{
+			"board": BoardResponse{
+				ID:              board.ID,
+				Title:           board.Title,
+				Description:     board.Description,
+				BackgroundColor: board.BackgroundColor,
+				OwnerID:         board.OwnerID,
+				CreatedAt:       board.CreatedAt,
+				UpdatedAt:       board.UpdatedAt,
+			},
+			"message": "Board created successfully",
 		})
 
 		return nil
@@ -159,9 +173,27 @@ func GetBoard(c *gin.Context) {
 	})
 }
 
+// // UpdateBoard updates a board
+// func UpdateBoard(c *gin.Context) {
+// 	userID := c.GetUint("user_id")
+// 	boardID := c.Param("id")
+
+// 	var req UpdateBoardRequest
+// 	if err := c.ShouldBindJSON(&req); err != nil {
+// 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+// 		return
+// 	}
+
+// 	// Find board and verify ownership
+// 	var board models.Board
+// 	if err := database.DB.Where("id = ? AND owner_id = ?", boardID, userID).First(&board).Error; err != nil {
+// 		c.AbortWithStatusJSON(http.StatusNotFound, gin.H{"error": "Board not found"})
+// 		return
+// 	}
+
 // UpdateBoard updates a board
 func UpdateBoard(c *gin.Context) {
-	userID := c.GetUint("user_id")
+	// userID := c.GetUint("user_id")
 	boardID := c.Param("id")
 
 	var req UpdateBoardRequest
@@ -170,9 +202,9 @@ func UpdateBoard(c *gin.Context) {
 		return
 	}
 
-	// Find board and verify ownership
+	// Find board (permission already checked by middleware)
 	var board models.Board
-	if err := database.DB.Where("id = ? AND owner_id = ?", boardID, userID).First(&board).Error; err != nil {
+	if err := database.DB.Where("id = ?", boardID).First(&board).Error; err != nil {
 		c.AbortWithStatusJSON(http.StatusNotFound, gin.H{"error": "Board not found"})
 		return
 	}

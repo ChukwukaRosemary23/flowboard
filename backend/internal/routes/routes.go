@@ -57,7 +57,8 @@ func SetupRoutes(router *gin.Engine, hub *ws.Hub) {
 				// Board member management routes
 				boards.GET("/:id/members", middleware.RequireBoardAccess(), handlers.GetBoardMembers)
 				boards.POST("/:id/members", middleware.RequirePermission("invite_member"), handlers.InviteMember) // ← CHANGED
-				boards.DELETE("/:id/members/:user_id", middleware.RequirePermission("manage_members"), handlers.RemoveMember)
+				boards.DELETE("/:id/members/:member_id", middleware.RequirePermission("manage_members"), handlers.RemoveMember)
+				// boards.DELETE("/:id/members/:user_id", middleware.RequirePermission("manage_members"), handlers.RemoveMember)
 				boards.PUT("/:id/members/:user_id/role", middleware.RequirePermission("manage_members"), handlers.UpdateMemberRole)
 			}
 
