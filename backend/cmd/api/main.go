@@ -52,14 +52,14 @@ func main() {
 		"http://127.0.0.1:3000",
 		"http://127.0.0.1:3001",
 		"http://127.0.0.1:5173",
-		"https://myflowboard-a0anfobxt-chukwukarosemary23s-projects.vercel.app", // Added Vercel URL
+		"https://myflowboard-a0anfobxt-chukwukarosemary23s-projects.vercel.app",
 	}
 
 	// Add production frontend URL from environment variable
 	frontendURL := os.Getenv("FRONTEND_URL")
 	if frontendURL != "" {
 		allowedOrigins = append(allowedOrigins, frontendURL)
-		log.Printf("✅ Added frontend URL to CORS: %s", frontendURL)
+		log.Printf(" Added frontend URL to CORS: %s", frontendURL)
 	}
 
 	router.Use(cors.New(cors.Config{
@@ -82,16 +82,16 @@ func main() {
 	// Setup API routes (pass hub)
 	routes.SetupRoutes(router, hub)
 
-	// Get port from environment variable (Render uses this)
+	// Get port from environment variable
 	port := os.Getenv("PORT")
 	if port == "" {
-		port = cfg.Port // Fallback to config (local development)
+		port = cfg.Port
 	}
 
 	serverAddr := ":" + port
-	log.Printf("🚀 Server starting on port %s\n", port)
-	log.Printf("📊 Environment: %s\n", cfg.Env)
-	log.Println("📚 API Endpoints:")
+	log.Printf(" Server starting on port %s\n", port)
+	log.Printf(" Environment: %s\n", cfg.Env)
+	log.Println(" API Endpoints:")
 	log.Println("   Health Check:")
 	log.Println("     GET    /ping                         - Health check")
 	log.Println("   WebSocket:")
