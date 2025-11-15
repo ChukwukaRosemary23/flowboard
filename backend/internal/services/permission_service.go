@@ -36,7 +36,6 @@ func (ps *PermissionService) CheckPermission(userID, boardID uint, permissionNam
 
 	log.Printf("   → Permission check result: count=%d, hasPermission=%v", count, count > 0)
 
-	// If count is 0, let's see what role the user has
 	if count == 0 {
 		var roleName string
 		database.DB.Table("board_members").

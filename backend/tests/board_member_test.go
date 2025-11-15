@@ -15,7 +15,7 @@ type BoardMemberTestSuite struct {
 }
 
 func (suite *BoardMemberTestSuite) TearDownTest() {
-	// Cleanup after test
+
 }
 
 // Test inviting a member successfully
@@ -24,7 +24,6 @@ func (suite *BoardMemberTestSuite) TestInviteMember_Success() {
 	board := Factory.CreateBoard(owner.ID)
 	newMember := Factory.CreateUser()
 
-	// DEBUG: Check database state directly
 	log.Printf("\n🔍 === DATABASE STATE CHECK ===")
 
 	// Check if owner is in board_members
@@ -120,7 +119,7 @@ func (suite *BoardMemberTestSuite) TestInviteMember_AccessControl() {
 
 	for _, tc := range testCases {
 		suite.Run(tc.role, func() {
-			// Create fresh board and owner for EACH sub-test
+
 			owner := Factory.CreateUser()
 			board := Factory.CreateBoard(owner.ID)
 			newMember := Factory.CreateUser()

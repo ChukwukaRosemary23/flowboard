@@ -25,7 +25,6 @@ func InviteMember(c *gin.Context) {
 		return
 	}
 
-	// Validate role exists (right after request validation)
 	var role models.Role
 	if err := database.DB.Where("name = ?", req.Role).First(&role).Error; err != nil {
 		c.AbortWithStatusJSON(http.StatusNotFound, gin.H{"error": "Role not found"})
@@ -63,7 +62,6 @@ func InviteMember(c *gin.Context) {
 		return
 	}
 
-	// Preload relationships for response
 	database.DB.Preload("User").Preload("Role").First(&boardMember, boardMember.ID)
 
 	c.JSON(http.StatusCreated, gin.H{
@@ -74,7 +72,7 @@ func InviteMember(c *gin.Context) {
 
 // RemoveMember removes a user from a board
 func RemoveMember(c *gin.Context) {
-	// boardID, _ := strconv.ParseUint(c.Param("id"), 10, 32)  //
+
 	memberID, _ := strconv.ParseUint(c.Param("member_id"), 10, 32)
 
 	// Find the board member
@@ -116,7 +114,6 @@ func UpdateMemberRole(c *gin.Context) {
 		return
 	}
 
-	// Validate role exists (right after request validation)
 	var role models.Role
 	if err := database.DB.Where("name = ?", req.Role).First(&role).Error; err != nil {
 		c.AbortWithStatusJSON(http.StatusNotFound, gin.H{"error": "Role not found"})
@@ -145,7 +142,6 @@ func UpdateMemberRole(c *gin.Context) {
 	boardMember.UpdatedAt = time.Now()
 	database.DB.Save(&boardMember)
 
-	// Preload for response
 	database.DB.Preload("User").Preload("Role").First(&boardMember, boardMember.ID)
 
 	c.JSON(http.StatusOK, gin.H{

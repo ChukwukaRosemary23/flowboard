@@ -12,7 +12,7 @@ import (
 // AuthRequired is middleware that checks if user has valid JWT token
 func AuthRequired() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// Get Authorization header
+
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Authorization header required"})
@@ -20,7 +20,6 @@ func AuthRequired() gin.HandlerFunc {
 			return
 		}
 
-		// Check if it starts with "Bearer "
 		parts := strings.Split(authHeader, " ")
 		if len(parts) != 2 || parts[0] != "Bearer" {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid authorization header format. Use: Bearer <token>"})
@@ -39,7 +38,6 @@ func AuthRequired() gin.HandlerFunc {
 			return
 		}
 
-		// Store user info in context (so handlers can access it)
 		c.Set("user_id", claims.UserID)
 		c.Set("username", claims.Username)
 		c.Set("email", claims.Email)

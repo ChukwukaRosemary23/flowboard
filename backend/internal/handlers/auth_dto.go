@@ -1,6 +1,6 @@
 package handlers
 
-// DTO = Data Transfer Object (what we receive from frontend)
+
 
 // RegisterRequest represents registration input
 type RegisterRequest struct {

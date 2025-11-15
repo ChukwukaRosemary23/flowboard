@@ -17,7 +17,7 @@ import (
 var serverCmd *exec.Cmd
 
 func TestMain(m *testing.M) {
-	log.Println("🚀 Setting up test environment...")
+	log.Println("Setting up test environment...")
 
 	// Load test environment
 	os.Setenv("ENV", "test")
@@ -27,19 +27,19 @@ func TestMain(m *testing.M) {
 
 	// Force load .env.test file
 	if err := godotenv.Load(".env.test"); err != nil {
-		log.Fatal("❌ Error loading .env.test file:", err)
+		log.Fatal("Error loading .env.test file:", err)
 	}
 
 	cfg := config.LoadConfig()
 
 	// Connect to test database
-	log.Println("📊 Connecting to test database:", cfg.DBName)
+	log.Println("Connecting to test database:", cfg.DBName)
 	if err := database.ConnectDatabase(cfg); err != nil {
-		log.Fatal("❌ Failed to connect to test database:", err)
+		log.Fatal("Failed to connect to test database:", err)
 	}
 
-	// CLEAN UP OLD DATA BEFORE STARTING - Comprehensive cleanup
-	log.Println("🧹 Cleaning up old test data...")
+	
+	log.Println("Cleaning up old test data...")
 	database.DB.Exec("TRUNCATE TABLE activities CASCADE")
 	database.DB.Exec("TRUNCATE TABLE attachments CASCADE")
 	database.DB.Exec("TRUNCATE TABLE card_members CASCADE")
@@ -54,10 +54,10 @@ func TestMain(m *testing.M) {
 	database.DB.Exec("TRUNCATE TABLE permissions CASCADE")
 	database.DB.Exec("TRUNCATE TABLE roles CASCADE")
 	database.DB.Exec("TRUNCATE TABLE users CASCADE")
-	log.Println("✅ Old test data cleaned")
+	log.Println("Old test data cleaned")
 
-	// Auto-migrate tables (ALL models in correct order)
-	log.Println("🔄 Running database migrations...")
+	// Auto-migrate tables in correct order
+	log.Println("Running database migrations...")
 	database.DB.AutoMigrate(
 		&models.User{},
 		&models.Board{},
@@ -75,19 +75,19 @@ func TestMain(m *testing.M) {
 		&models.BoardMember{},
 	)
 
-	// Seed roles and permissions using shared function
+	// Seed roles and permissions
 	database.SeedRolesAndPermissions()
 
 	// Start HTTP server as subprocess
-	log.Println("🌐 Starting HTTP server...")
+	log.Println("Starting HTTP server...")
 
-	// Capture server output to file for debugging
+	// Create log file for server output
 	serverLogFile, err := os.Create("server_test.log")
 	if err != nil {
 		log.Fatal("Failed to create log file:", err)
 	}
 	defer func() {
-		time.Sleep(100 * time.Millisecond) // Give time for writes
+		time.Sleep(100 * time.Millisecond) 
 		serverLogFile.Close()
 	}()
 
@@ -106,30 +106,30 @@ func TestMain(m *testing.M) {
 	serverCmd.Stderr = serverLogFile
 
 	if err := serverCmd.Start(); err != nil {
-		log.Fatal("❌ Failed to start server:", err)
+		log.Fatal("Failed to start server:", err)
 	}
 
-	// Wait for server to be ready with retry logic
-	log.Println("⏳ Waiting for server to be ready...")
+	// Wait for server to be ready
+	log.Println("Waiting for server to be ready...")
 	if !waitForServer(cfg.Port, 5, 3*time.Second) {
-		log.Fatal("❌ Server failed to start after 5 retries")
+		log.Fatal("Server failed to start after 5 retries")
 	}
 
-	log.Println("✅ Server is ready!")
-	log.Println("🧪 Running tests...")
+	log.Println("Server is ready!")
+	log.Println("Running tests...")
 
-	// Run tests
+	// Run all tests
 	code := m.Run()
 
-	// Cleanup
-	log.Println("🧹 Cleaning up...")
+	// Cleanup after tests
+	log.Println("Cleaning up...")
 	if serverCmd != nil && serverCmd.Process != nil {
 		serverCmd.Process.Kill()
-		log.Println("🛑 Server stopped")
+		log.Println("Server stopped")
 	}
 
-	// Rollback migrations (drop tables in reverse order)
-	log.Println("🔄 Rolling back migrations...")
+	// Drop all tables in reverse order
+	log.Println("Rolling back migrations...")
 	database.DB.Migrator().DropTable(
 		&models.BoardMember{},
 		&models.RolePermission{},
@@ -147,16 +147,16 @@ func TestMain(m *testing.M) {
 		&models.User{},
 	)
 
-	log.Println("✅ Test environment cleaned up")
+	log.Println("Test environment cleaned up")
 	os.Exit(code)
 }
 
-// waitForServer checks if server is ready with retry logic
+// waitForServer checks if the server is ready by pinging the health endpoint
 func waitForServer(port string, maxRetries int, waitTime time.Duration) bool {
 	url := "http://localhost:" + port + "/health"
 
 	for i := 0; i < maxRetries; i++ {
-		log.Printf("⏳ Checking server health (attempt %d/%d)...", i+1, maxRetries)
+		log.Printf("Checking server health (attempt %d/%d)...", i+1, maxRetries)
 
 		resp, err := http.Get(url)
 		if err == nil && resp.StatusCode == 200 {
@@ -164,7 +164,7 @@ func waitForServer(port string, maxRetries int, waitTime time.Duration) bool {
 		}
 
 		if i < maxRetries-1 {
-			log.Printf("⏳ Server not ready, waiting %v before retry...", waitTime)
+			log.Printf("Server not ready, waiting %v before retry...", waitTime)
 			time.Sleep(waitTime)
 		}
 	}

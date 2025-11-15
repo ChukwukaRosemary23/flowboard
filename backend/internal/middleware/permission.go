@@ -11,7 +11,7 @@ import (
 // RequirePermission middleware checks if user has specific permission on a board
 func RequirePermission(permissionName string) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// Get user ID from JWT (set by auth middleware)
+		
 		userID, exists := c.Get("user_id")
 		if !exists {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
@@ -19,10 +19,10 @@ func RequirePermission(permissionName string) gin.HandlerFunc {
 			return
 		}
 
-		// Get board ID from URL parameter
+	
 		boardIDStr := c.Param("board_id")
 		if boardIDStr == "" {
-			boardIDStr = c.Param("id") // For board routes like /boards/:id
+			boardIDStr = c.Param("id") 
 		}
 
 		boardID, err := strconv.ParseUint(boardIDStr, 10, 32)

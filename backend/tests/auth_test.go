@@ -12,12 +12,12 @@ type AuthTestSuite struct {
 }
 
 func (suite *AuthTestSuite) SetupTest() {
-	// Clean up users before each test to avoid duplicates
+
 	database.DB.Exec("DELETE FROM users")
 }
 
 func (suite *AuthTestSuite) TearDownTest() {
-	// Cleanup after test
+
 }
 
 // Test user registration with valid data
@@ -37,10 +37,9 @@ func (suite *AuthTestSuite) TestRegister_Success() {
 
 // Test registration with duplicate email
 func (suite *AuthTestSuite) TestRegister_DuplicateEmail() {
-	// Create first user
+
 	Factory.CreateUserWithCredentials("existing@test.com", "password123")
 
-	// Try to register with same email
 	requestBody := map[string]string{
 		"username": "newuser",
 		"email":    "existing@test.com",
@@ -49,7 +48,6 @@ func (suite *AuthTestSuite) TestRegister_DuplicateEmail() {
 
 	response := POST("/auth/register", requestBody)
 
-	// Should fail with 400 or 409
 	suite.True(response.StatusCode == 400 || response.StatusCode == 409)
 	suite.NotNil(response.Body["error"])
 }

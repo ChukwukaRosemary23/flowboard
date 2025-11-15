@@ -21,10 +21,9 @@ func SeedRolesAndPermissions() {
 	// Seed roles
 	seedRoles()
 
-	// Seed permissions
 	seedPermissions()
 
-	// Assign permissions to roles
+	
 	assignPermissionsToRoles()
 
 	log.Println("✅ Roles and permissions seeded successfully")
@@ -71,7 +70,7 @@ func seedPermissions() {
 
 // assignPermissionsToRoles assigns permissions to each role
 func assignPermissionsToRoles() {
-	// Get all roles
+	
 	var ownerRole, adminRole, memberRole, viewerRole models.Role
 	DB.Where("name = ?", "owner").First(&ownerRole)
 	DB.Where("name = ?", "admin").First(&adminRole)
@@ -106,7 +105,7 @@ func assignPermissionsToRoles() {
 // assignPermissionsToRole assigns permissions to a role (with optional exclusions)
 func assignPermissionsToRole(roleID uint, permissions []models.Permission, exclude []string) {
 	for _, perm := range permissions {
-		// Check if permission should be excluded
+		
 		shouldExclude := false
 		for _, excluded := range exclude {
 			if perm.Name == excluded {

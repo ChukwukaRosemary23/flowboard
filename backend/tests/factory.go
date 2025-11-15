@@ -17,7 +17,7 @@ var Factory = &FactoryHelper{}
 
 // CreateUser creates a user with random data
 func (f *FactoryHelper) CreateUser() *models.User {
-	// Get default test password from env
+	
 	testPassword := os.Getenv("TEST_USER_PASSWORD")
 	if testPassword == "" {
 		testPassword = "password123"
@@ -37,7 +37,7 @@ func (f *FactoryHelper) CreateUser() *models.User {
 
 // CreateUserWithCredentials creates a user with specific credentials
 func (f *FactoryHelper) CreateUserWithCredentials(email, password string) *models.User {
-	// Validate password is not empty
+
 	if password == "" {
 		panic("Password cannot be empty")
 	}
@@ -65,7 +65,6 @@ func (f *FactoryHelper) CreateBoard(ownerID uint) *models.Board {
 
 	database.DB.Create(board)
 
-	// Add owner to board_members (mimics what CreateBoard handler does)
 	var ownerRole models.Role
 	database.DB.Where("name = ?", "owner").First(&ownerRole)
 
