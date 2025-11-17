@@ -34,7 +34,7 @@ func GetBoardActivities(c *gin.Context) {
 		return
 	}
 
-	// Get activities (last 50)
+	// Get activities 
 	var activities []models.Activity
 	if err := database.DB.Where("board_id = ?", boardID).
 		Preload("User").

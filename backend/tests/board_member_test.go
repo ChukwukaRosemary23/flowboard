@@ -145,6 +145,17 @@ func (suite *BoardMemberTestSuite) TestInviteMember_AccessControl() {
 
 			suite.Equal(tc.expectedStatus, response.StatusCode,
 				fmt.Sprintf("%s should get %d status", tc.role, tc.expectedStatus))
+
+			// Assertions for successful invitations
+			if tc.expectedStatus == 201 {
+				suite.Equal("Member added successfully", response.Body["message"])
+				suite.NotNil(response.Body["member"], "Should return member object")
+			}
+
+			// Assertions for denied access
+			if tc.expectedStatus == 403 {
+				suite.Contains(response.Body["error"], "permission")
+			}
 		})
 	}
 }
@@ -163,6 +174,8 @@ func (suite *BoardMemberTestSuite) TestRemoveMember_Success() {
 	LogResponse("TestRemoveMember_Success", response)
 
 	suite.Equal(200, response.StatusCode)
+	suite.Equal("Member removed successfully", response.Body["message"])
+
 }
 
 // Test that owner cannot be removed

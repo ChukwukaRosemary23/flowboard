@@ -15,14 +15,14 @@ type BoardTestSuite struct {
 }
 
 func (suite *BoardTestSuite) SetupTest() {
-	
+
 	database.DB.Exec("DELETE FROM board_members")
 	database.DB.Exec("DELETE FROM boards")
 	database.DB.Exec("DELETE FROM users")
 }
 
 func (suite *BoardTestSuite) TearDownTest() {
-	
+
 }
 
 // Test creating a board
@@ -40,6 +40,14 @@ func (suite *BoardTestSuite) TestCreateBoard_Success() {
 
 	suite.Equal(201, response.StatusCode)
 	suite.NotNil(response.Body["board"])
+	suite.Equal("Board created successfully", response.Body["message"])
+
+	board := response.Body["board"].(map[string]interface{})
+	suite.Equal("My New Board", board["title"])
+	suite.Equal("Test board description", board["description"])
+	suite.Equal("#FF5733", board["background_color"])
+	suite.NotNil(board["id"])
+	suite.NotNil(board["created_at"])
 }
 
 // Test creating board without authentication
@@ -48,7 +56,7 @@ func (suite *BoardTestSuite) TestCreateBoard_Unauthorized() {
 		"title": "My Board",
 	}
 
-	response := POST("/boards", requestBody) 
+	response := POST("/boards", requestBody)
 
 	suite.Equal(401, response.StatusCode)
 }
@@ -68,7 +76,6 @@ func (suite *BoardTestSuite) TestGetBoards_ShowsOnlyAccessibleBoards() {
 
 	suite.Equal(200, response.StatusCode)
 
-	
 	if response.StatusCode == 200 && response.Body["boards"] != nil {
 		boards := response.Body["boards"].([]interface{})
 		suite.Equal(1, len(boards), "User1 should only see their own board")
@@ -80,7 +87,6 @@ func (suite *BoardTestSuite) TestDeleteBoard_AccessControl() {
 	owner := Factory.CreateUser()
 	board := Factory.CreateBoard(owner.ID)
 
-	
 	time.Sleep(100 * time.Millisecond)
 
 	testCases := []struct {
@@ -102,7 +108,7 @@ func (suite *BoardTestSuite) TestDeleteBoard_AccessControl() {
 			} else {
 				user = Factory.CreateUser()
 				Factory.CreateBoardMember(board.ID, user.ID, tc.role)
-			
+
 				time.Sleep(100 * time.Millisecond)
 			}
 
@@ -120,7 +126,6 @@ func (suite *BoardTestSuite) TestUpdateBoard_AccessControl() {
 	owner := Factory.CreateUser()
 	board := Factory.CreateBoard(owner.ID)
 
-	
 	time.Sleep(100 * time.Millisecond)
 
 	testCases := []struct {
@@ -142,7 +147,7 @@ func (suite *BoardTestSuite) TestUpdateBoard_AccessControl() {
 			} else {
 				user = Factory.CreateUser()
 				Factory.CreateBoardMember(board.ID, user.ID, tc.role)
-				
+
 				time.Sleep(100 * time.Millisecond)
 			}
 
@@ -155,10 +160,17 @@ func (suite *BoardTestSuite) TestUpdateBoard_AccessControl() {
 			response := PUT(fmt.Sprintf("/boards/%d", board.ID), requestBody, token)
 
 			suite.Equal(tc.expectedStatus, response.StatusCode)
+
+			// Assert response content for successful updates
+			if tc.expectedStatus == 200 && response.Body["board"] != nil {
+				board := response.Body["board"].(map[string]interface{})
+				suite.Equal("Updated Title", board["title"])
+			}
 		})
 	}
 }
 
 func TestBoardTestSuite(t *testing.T) {
 	suite.Run(t, new(BoardTestSuite))
+
 }

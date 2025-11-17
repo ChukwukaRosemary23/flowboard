@@ -15,20 +15,14 @@ type UpdateCardRequest struct {
 	Title       string     `json:"title" binding:"omitempty,min=1,max=200"`
 	Description string     `json:"description" binding:"omitempty,max=2000"`
 	Position    *int       `json:"position" binding:"omitempty,min=0"`
-	DueDate     *time.Time `json:"due_date"` // Can be null to remove due date
+	DueDate     *time.Time `json:"due_date"`
 }
 
-// MoveCardRequest for moving card to different list or position
-// type MoveCardRequest struct {
-// 	ListID   uint `json:"list_id" binding:"required"`
-// 	Position int  `json:"position" binding:"required,min=0"`
-// }
 type MoveCardRequest struct {
 	ListID   uint `json:"list_id" binding:"required"`
-	Position int  `json:"position" binding:"min=0"` // Remove "required"
+	Position int  `json:"position" binding:"min=0"`
 }
 
-// CardDetailResponse includes members, labels, comments, attachments
 type CardDetailResponse struct {
 	ID          uint                 `json:"id"`
 	Title       string               `json:"title"`
