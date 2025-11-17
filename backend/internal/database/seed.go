@@ -48,10 +48,10 @@ func seedPermissions() {
 	permissions := []models.Permission{
 		{Name: "view_board", Resource: "board", Action: "view", Description: "Can view board and its contents"},
 		{Name: "edit_board", Resource: "board", Action: "edit", Description: "Can edit board settings"},
-		{Name: "update_board", Resource: "board", Action: "update", Description: "Can update board properties"}, // ← ADD THIS
+		{Name: "update_board", Resource: "board", Action: "update", Description: "Can update board properties"},
 		{Name: "delete_board", Resource: "board", Action: "delete", Description: "Can delete the board"},
 		{Name: "manage_members", Resource: "board", Action: "manage", Description: "Can add/remove members"},
-		{Name: "invite_member", Resource: "board", Action: "invite", Description: "Can invite members to board"}, // ← ADD THIS
+		{Name: "invite_member", Resource: "board", Action: "invite", Description: "Can invite members to board"}, 
 		{Name: "create_list", Resource: "list", Action: "create", Description: "Can create new lists"},
 		{Name: "edit_list", Resource: "list", Action: "edit", Description: "Can edit list properties"},
 		{Name: "delete_list", Resource: "list", Action: "delete", Description: "Can delete lists"},
