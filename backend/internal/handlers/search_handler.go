@@ -108,8 +108,8 @@ func SearchCards(c *gin.Context) {
 			UpdatedAt:   card.UpdatedAt,
 			Members:     members,
 			Labels:      labels,
-			Comments:    []CommentResponse{},    // Don't load comments in search results
-			Attachments: []AttachmentResponse{}, // Don't load attachments in search results
+			Comments:    []CommentResponse{},    
+			Attachments: []AttachmentResponse{}, 
 		}
 	}
 

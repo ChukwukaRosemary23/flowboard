@@ -13,24 +13,24 @@ import (
 func CreateBoard(c *gin.Context) {
 	var req CreateBoardRequest
 
-	// Validate input
+
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	// Get user ID from context (set by auth middleware)
+
 	userID := c.GetUint("user_id")
 
-	// Set default background color if not provided
+	
 	backgroundColor := req.BackgroundColor
 	if backgroundColor == "" {
-		backgroundColor = "#0079BF" // Trello blue
+		backgroundColor = "#0079BF" 
 	}
 
-	// Wrap all database operations in a transaction
+	
 	err := database.DB.Transaction(func(tx *gorm.DB) error {
-		// Create board
+		
 		board := models.Board{
 			Title:           req.Title,
 			Description:     req.Description,
@@ -42,13 +42,12 @@ func CreateBoard(c *gin.Context) {
 			return err
 		}
 
-		// Get the owner role
+
 		var ownerRole models.Role
 		if err := tx.Where("name = ?", "owner").First(&ownerRole).Error; err != nil {
-			return err // Critical error - role missing means migrations not run
+			return err 
 		}
 
-		// Add creator as owner in board_members table
 		boardMember := models.BoardMember{
 			BoardID: board.ID,
 			UserID:  userID,
@@ -60,15 +59,18 @@ func CreateBoard(c *gin.Context) {
 			return err
 		}
 
-		// Success! Return the board
-		c.JSON(http.StatusCreated, BoardResponse{
-			ID:              board.ID,
-			Title:           board.Title,
-			Description:     board.Description,
-			BackgroundColor: board.BackgroundColor,
-			OwnerID:         board.OwnerID,
-			CreatedAt:       board.CreatedAt,
-			UpdatedAt:       board.UpdatedAt,
+
+		c.JSON(http.StatusCreated, gin.H{
+			"board": BoardResponse{
+				ID:              board.ID,
+				Title:           board.Title,
+				Description:     board.Description,
+				BackgroundColor: board.BackgroundColor,
+				OwnerID:         board.OwnerID,
+				CreatedAt:       board.CreatedAt,
+				UpdatedAt:       board.UpdatedAt,
+			},
+			"message": "Board created successfully",
 		})
 
 		return nil
@@ -86,7 +88,7 @@ func GetBoards(c *gin.Context) {
 
 	var boards []models.Board
 
-	// Get all boards where user is a member (including owned boards)
+	
 	err := database.DB.
 		Joins("JOIN board_members ON boards.id = board_members.board_id").
 		Where("board_members.user_id = ? AND board_members.status = ?", userID, "active").
@@ -99,7 +101,7 @@ func GetBoards(c *gin.Context) {
 		return
 	}
 
-	// Convert to response format
+	
 	response := make([]BoardResponse, len(boards))
 	for i, board := range boards {
 		response[i] = BoardResponse{
@@ -125,7 +127,7 @@ func GetBoard(c *gin.Context) {
 	boardID := c.Param("id")
 
 	var board models.Board
-	// Find board and verify ownership
+	
 	if err := database.DB.Where("id = ? AND owner_id = ?", boardID, userID).
 		Preload("Lists").
 		First(&board).Error; err != nil {
@@ -133,7 +135,7 @@ func GetBoard(c *gin.Context) {
 		return
 	}
 
-	// Convert lists to response format
+	
 	lists := make([]ListResponse, len(board.Lists))
 	for i, list := range board.Lists {
 		lists[i] = ListResponse{
@@ -159,9 +161,10 @@ func GetBoard(c *gin.Context) {
 	})
 }
 
+
 // UpdateBoard updates a board
 func UpdateBoard(c *gin.Context) {
-	userID := c.GetUint("user_id")
+
 	boardID := c.Param("id")
 
 	var req UpdateBoardRequest
@@ -170,14 +173,14 @@ func UpdateBoard(c *gin.Context) {
 		return
 	}
 
-	// Find board and verify ownership
+	
 	var board models.Board
-	if err := database.DB.Where("id = ? AND owner_id = ?", boardID, userID).First(&board).Error; err != nil {
+	if err := database.DB.Where("id = ?", boardID).First(&board).Error; err != nil {
 		c.AbortWithStatusJSON(http.StatusNotFound, gin.H{"error": "Board not found"})
 		return
 	}
 
-	// Update fields (only if provided)
+	
 	if req.Title != "" {
 		board.Title = req.Title
 	}
@@ -194,7 +197,6 @@ func UpdateBoard(c *gin.Context) {
 		return
 	}
 
-	// Return response
 	c.JSON(http.StatusOK, BoardResponse{
 		ID:              board.ID,
 		Title:           board.Title,
@@ -211,14 +213,14 @@ func DeleteBoard(c *gin.Context) {
 	userID := c.GetUint("user_id")
 	boardID := c.Param("id")
 
-	// Find board and verify ownership
+	
 	var board models.Board
 	if err := database.DB.Where("id = ? AND owner_id = ?", boardID, userID).First(&board).Error; err != nil {
 		c.AbortWithStatusJSON(http.StatusNotFound, gin.H{"error": "Board not found"})
 		return
 	}
 
-	// Soft delete (sets deleted_at timestamp)
+	
 	if err := database.DB.Delete(&board).Error; err != nil {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete board"})
 		return

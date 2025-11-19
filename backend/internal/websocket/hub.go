@@ -52,7 +52,7 @@ func (h *Hub) Run() {
 			}
 			h.boards[client.BoardID][client] = true
 			h.mu.Unlock()
-			log.Printf("✅ Client registered for board %d. Total clients: %d", client.BoardID, len(h.boards[client.BoardID]))
+			log.Printf(" Client registered for board %d. Total clients: %d", client.BoardID, len(h.boards[client.BoardID]))
 
 		case client := <-h.unregister:
 			h.mu.Lock()

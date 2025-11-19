@@ -33,32 +33,6 @@ func UploadAttachment(c *gin.Context) {
 	}
 
 	// Get uploaded file
-	// file, header, err := c.Request.FormFile("file")
-	// if err != nil {
-	// 	c.JSON(http.StatusBadRequest, gin.H{"error": "No file uploaded"})
-	// 	return
-	// }
-	// defer file.Close()
-
-	// Get uploaded file
-	// fmt.Println("========== DEBUG FILE UPLOAD ==========")
-	// fmt.Println("Content-Type:", c.Request.Header.Get("Content-Type"))
-	// fmt.Println("Attempting to get form file...")
-	// file, header, err := c.Request.FormFile("file")
-	// if err != nil {
-	// 	fmt.Println("❌ Error getting file:", err)
-	// 	c.JSON(http.StatusBadRequest, gin.H{
-	// 		"error": "No file uploaded",
-	// 		"details": err.Error(),
-	// 		"hint": "Make sure field name is 'file' and type is 'File' in form-data",
-	// 	})
-	// 	return
-	// }
-	// fmt.Println("✅ File received:", header.Filename, "Size:", header.Size)
-	// fmt.Println("=======================================")
-	// defer file.Close()
-
-	// Get uploaded file
 	file, header, err := c.Request.FormFile("file")
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "No file uploaded"})
@@ -72,7 +46,7 @@ func UploadAttachment(c *gin.Context) {
 		return
 	}
 
-	// Create uploads directory if it doesn't exist
+	
 	uploadsDir := "./uploads"
 	if err := os.MkdirAll(uploadsDir, os.ModePerm); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create uploads directory"})
@@ -109,7 +83,7 @@ func UploadAttachment(c *gin.Context) {
 	}
 
 	if err := database.DB.Create(&attachment).Error; err != nil {
-		// Clean up file if database insert fails
+		
 		os.Remove(filepath)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create attachment record"})
 		return
@@ -247,7 +221,7 @@ func DeleteAttachment(c *gin.Context) {
 	// Delete file from disk
 	filePath := "." + attachment.FileURL
 	if err := os.Remove(filePath); err != nil {
-		// Log error but continue (file might already be deleted)
+		
 		fmt.Println("Warning: Could not delete file:", err)
 	}
 

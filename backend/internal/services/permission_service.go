@@ -1,6 +1,8 @@
 package services
 
 import (
+	"log"
+
 	"github.com/ChukwukaRosemary23/flowboard-backend/internal/database"
 	"github.com/ChukwukaRosemary23/flowboard-backend/internal/models"
 )
@@ -12,6 +14,16 @@ type PermissionService struct{}
 func (ps *PermissionService) CheckPermission(userID, boardID uint, permissionName string) bool {
 	var count int64
 
+	log.Printf("🔍 CheckPermission: userID=%d, boardID=%d, permission=%s", userID, boardID, permissionName)
+
+	// First, check if user is in board_members
+	var boardMemberCount int64
+	database.DB.Table("board_members").
+		Where("user_id = ? AND board_id = ? AND status = ?", userID, boardID, "active").
+		Count(&boardMemberCount)
+	log.Printf("   → User in board_members: %d", boardMemberCount)
+
+	// Check the actual permission query
 	database.DB.Table("board_members").
 		Joins("JOIN roles ON board_members.role_id = roles.id").
 		Joins("JOIN role_permissions ON roles.id = role_permissions.role_id").
@@ -21,6 +33,28 @@ func (ps *PermissionService) CheckPermission(userID, boardID uint, permissionNam
 		Where("board_members.status = ?", "active").
 		Where("permissions.name = ?", permissionName).
 		Count(&count)
+
+	log.Printf("   → Permission check result: count=%d, hasPermission=%v", count, count > 0)
+
+	if count == 0 {
+		var roleName string
+		database.DB.Table("board_members").
+			Select("roles.name").
+			Joins("JOIN roles ON board_members.role_id = roles.id").
+			Where("board_members.user_id = ? AND board_members.board_id = ?", userID, boardID).
+			Scan(&roleName)
+		log.Printf("   → User's role: %s", roleName)
+
+		// Check what permissions this role has
+		var permissions []string
+		database.DB.Table("role_permissions").
+			Select("permissions.name").
+			Joins("JOIN roles ON role_permissions.role_id = roles.id").
+			Joins("JOIN permissions ON role_permissions.permission_id = permissions.id").
+			Where("roles.name = ?", roleName).
+			Scan(&permissions)
+		log.Printf("   → Role '%s' has permissions: %v", roleName, permissions)
+	}
 
 	return count > 0
 }

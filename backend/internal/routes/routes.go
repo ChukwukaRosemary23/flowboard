@@ -9,17 +9,18 @@ import (
 
 // SetupRoutes configures all API routes
 func SetupRoutes(router *gin.Engine, hub *ws.Hub) {
-	// API v1 group
+
+	router.GET("/health", handlers.HealthCheck)
+
 	api := router.Group("/api/v1")
 	{
-		// Public routes
+
 		auth := api.Group("/auth")
 		{
 			auth.POST("/register", handlers.Register)
 			auth.POST("/login", handlers.Login)
 		}
 
-		// WebSocket route - MOVED HERE (handles auth internally via token query param)
 		api.GET("/ws", handlers.HandleWebSocket(hub))
 
 		// Protected routes
@@ -40,7 +41,6 @@ func SetupRoutes(router *gin.Engine, hub *ws.Hub) {
 				})
 			})
 
-			// Board routes
 			boards := protected.Group("/boards")
 			{
 				boards.POST("", handlers.CreateBoard)
@@ -48,13 +48,13 @@ func SetupRoutes(router *gin.Engine, hub *ws.Hub) {
 
 				// Board detail routes - require board access
 				boards.GET("/:id", middleware.RequireBoardAccess(), handlers.GetBoard)
-				boards.PUT("/:id", middleware.RequirePermission("edit_board"), handlers.UpdateBoard)
+				boards.PUT("/:id", middleware.RequirePermission("update_board"), handlers.UpdateBoard)
 				boards.DELETE("/:id", middleware.RequireOwner(), handlers.DeleteBoard)
 
 				// Board member management routes
 				boards.GET("/:id/members", middleware.RequireBoardAccess(), handlers.GetBoardMembers)
-				boards.POST("/:id/members", middleware.RequirePermission("manage_members"), handlers.InviteMember)
-				boards.DELETE("/:id/members/:user_id", middleware.RequirePermission("manage_members"), handlers.RemoveMember)
+				boards.POST("/:id/members", middleware.RequirePermission("invite_member"), handlers.InviteMember)
+				boards.DELETE("/:id/members/:member_id", middleware.RequirePermission("manage_members"), handlers.RemoveMember)
 				boards.PUT("/:id/members/:user_id/role", middleware.RequirePermission("manage_members"), handlers.UpdateMemberRole)
 			}
 

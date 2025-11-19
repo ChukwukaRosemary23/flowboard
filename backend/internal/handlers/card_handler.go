@@ -11,7 +11,6 @@ import (
 	"gorm.io/gorm"
 )
 
-// Global hub instance (will be set from main)
 var WSHub *ws.Hub
 
 // CreateCard creates a new card in a list

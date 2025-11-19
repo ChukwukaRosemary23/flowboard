@@ -18,11 +18,10 @@ var DB *gorm.DB
 func ConnectDatabase(cfg *config.Config) error {
 	var dsn string
 
-	// Check if DATABASE_URL exists (Render uses this)
 	databaseURL := os.Getenv("DATABASE_URL")
 
 	if databaseURL != "" {
-		// Use DATABASE_URL (for Render/production)
+
 		dsn = databaseURL
 		log.Println("📦 Using DATABASE_URL for connection")
 	} else {
@@ -41,7 +40,6 @@ func ConnectDatabase(cfg *config.Config) error {
 	// Set up GORM config
 	gormConfig := &gorm.Config{}
 
-	// In development, show SQL queries (helpful for learning!)
 	if cfg.Env == "development" {
 		gormConfig.Logger = logger.Default.LogMode(logger.Info)
 	}
@@ -52,7 +50,6 @@ func ConnectDatabase(cfg *config.Config) error {
 		return fmt.Errorf("failed to connect to database: %w", err)
 	}
 
-	// Store in global variable
 	DB = database
 	log.Println("✅ Database connected successfully!")
 
@@ -68,8 +65,6 @@ func ConnectDatabase(cfg *config.Config) error {
 func runMigrations() error {
 	log.Println("🔄 Running database migrations...")
 
-	// AutoMigrate creates tables if they don't exist
-	// It also updates table structure if models changed
 	err := DB.AutoMigrate(
 		&models.User{},
 		&models.Board{},
