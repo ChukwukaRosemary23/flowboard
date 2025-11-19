@@ -1,0 +1,67 @@
+name: Backend Tests
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    name: Run Backend Tests
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: flowboard_tests
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.21'
+
+      - name: Install dependencies
+        working-directory: ./backend
+        run: go mod download
+
+      - name: Create test environment file
+        working-directory: ./backend
+        run: |
+          cat > .env.test << EOF
+          ENV=test
+          DB_HOST=localhost
+          DB_PORT=5432
+          DB_USER=postgres
+          DB_PASSWORD=postgres
+          DB_NAME=flowboard_tests
+          PORT=8083
+          JWT_SECRET=test-secret-key-for-ci-cd-pipeline
+          EOF
+
+      - name: Run tests
+        working-directory: ./backend
+        env:
+          ENV: test
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_USER: postgres
+          DB_PASSWORD: postgres
+          DB_NAME: flowboard_tests
+          PORT: 8083
+          JWT_SECRET: test-secret-key-for-ci-cd-pipeline
+        run: go test ./tests/... -v
