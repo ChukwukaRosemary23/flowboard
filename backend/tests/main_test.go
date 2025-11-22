@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"runtime"
 	"testing"
 	"time"
 
@@ -22,12 +23,10 @@ func TestMain(m *testing.M) {
 	// Load test environment
 	os.Setenv("ENV", "test")
 
-	// Change to backend directory to find .env.test
 	os.Chdir("..")
 
-	// Force load .env.test file
 	if err := godotenv.Load(".env.test"); err != nil {
-		log.Fatal("Error loading .env.test file:", err)
+		log.Println("No .env file found, using system environment variables")
 	}
 
 	cfg := config.LoadConfig()
@@ -38,25 +37,6 @@ func TestMain(m *testing.M) {
 		log.Fatal("Failed to connect to test database:", err)
 	}
 
-	
-	log.Println("Cleaning up old test data...")
-	database.DB.Exec("TRUNCATE TABLE activities CASCADE")
-	database.DB.Exec("TRUNCATE TABLE attachments CASCADE")
-	database.DB.Exec("TRUNCATE TABLE card_members CASCADE")
-	database.DB.Exec("TRUNCATE TABLE card_labels CASCADE")
-	database.DB.Exec("TRUNCATE TABLE comments CASCADE")
-	database.DB.Exec("TRUNCATE TABLE cards CASCADE")
-	database.DB.Exec("TRUNCATE TABLE labels CASCADE")
-	database.DB.Exec("TRUNCATE TABLE lists CASCADE")
-	database.DB.Exec("TRUNCATE TABLE board_members CASCADE")
-	database.DB.Exec("TRUNCATE TABLE boards CASCADE")
-	database.DB.Exec("TRUNCATE TABLE role_permissions CASCADE")
-	database.DB.Exec("TRUNCATE TABLE permissions CASCADE")
-	database.DB.Exec("TRUNCATE TABLE roles CASCADE")
-	database.DB.Exec("TRUNCATE TABLE users CASCADE")
-	log.Println("Old test data cleaned")
-
-	// Auto-migrate tables in correct order
 	log.Println("Running database migrations...")
 	database.DB.AutoMigrate(
 		&models.User{},
@@ -75,33 +55,54 @@ func TestMain(m *testing.M) {
 		&models.BoardMember{},
 	)
 
+	log.Println("Cleaning up old test data...")
+	database.DB.Exec("TRUNCATE TABLE activities CASCADE")
+	database.DB.Exec("TRUNCATE TABLE attachments CASCADE")
+	database.DB.Exec("TRUNCATE TABLE card_members CASCADE")
+	database.DB.Exec("TRUNCATE TABLE card_labels CASCADE")
+	database.DB.Exec("TRUNCATE TABLE comments CASCADE")
+	database.DB.Exec("TRUNCATE TABLE cards CASCADE")
+	database.DB.Exec("TRUNCATE TABLE labels CASCADE")
+	database.DB.Exec("TRUNCATE TABLE lists CASCADE")
+	database.DB.Exec("TRUNCATE TABLE board_members CASCADE")
+	database.DB.Exec("TRUNCATE TABLE boards CASCADE")
+	database.DB.Exec("TRUNCATE TABLE role_permissions CASCADE")
+	database.DB.Exec("TRUNCATE TABLE permissions CASCADE")
+	database.DB.Exec("TRUNCATE TABLE roles CASCADE")
+	database.DB.Exec("TRUNCATE TABLE users CASCADE")
+	log.Println("Old test data cleaned")
+
 	// Seed roles and permissions
+	log.Println("Running database migrations...")
 	database.SeedRolesAndPermissions()
 
 	// Start HTTP server as subprocess
 	log.Println("Starting HTTP server...")
 
-	// Create log file for server output
 	serverLogFile, err := os.Create("server_test.log")
 	if err != nil {
 		log.Fatal("Failed to create log file:", err)
 	}
 	defer func() {
-		time.Sleep(100 * time.Millisecond) 
+		time.Sleep(100 * time.Millisecond)
 		serverLogFile.Close()
 	}()
 
-	serverCmd = exec.Command("go", "run", "cmd/api/main.go")
-	serverCmd.Env = append(os.Environ(),
-		"ENV=test",
-		"DB_NAME=flowboard_tests3",
-		"DB_HOST=localhost",
-		"DB_PORT=5432",
-		"DB_USER=postgres",
-		"DB_PASSWORD=Rose1234",
-		"PORT=8083",
-		"JWT_SECRET=68aea209f5a75004f288d289973933808d5adfd8184fb767ad3",
-	)
+	log.Println("Building server binary...")
+	binaryName := "test_server"
+	if runtime.GOOS == "windows" {
+		binaryName = "test_server.exe"
+	}
+
+	buildCmd := exec.Command("go", "build", "-o", binaryName, "./cmd/api")
+	buildCmd.Stdout = serverLogFile
+	buildCmd.Stderr = serverLogFile
+	if err := buildCmd.Run(); err != nil {
+		log.Fatal("Failed to build server:", err)
+	}
+
+	serverCmd = exec.Command("./" + binaryName)
+	serverCmd.Env = os.Environ()
 	serverCmd.Stdout = serverLogFile
 	serverCmd.Stderr = serverLogFile
 
@@ -109,7 +110,6 @@ func TestMain(m *testing.M) {
 		log.Fatal("Failed to start server:", err)
 	}
 
-	// Wait for server to be ready
 	log.Println("Waiting for server to be ready...")
 	if !waitForServer(cfg.Port, 5, 3*time.Second) {
 		log.Fatal("Server failed to start after 5 retries")
@@ -118,17 +118,14 @@ func TestMain(m *testing.M) {
 	log.Println("Server is ready!")
 	log.Println("Running tests...")
 
-	// Run all tests
 	code := m.Run()
 
-	// Cleanup after tests
 	log.Println("Cleaning up...")
 	if serverCmd != nil && serverCmd.Process != nil {
 		serverCmd.Process.Kill()
 		log.Println("Server stopped")
 	}
 
-	// Drop all tables in reverse order
 	log.Println("Rolling back migrations...")
 	database.DB.Migrator().DropTable(
 		&models.BoardMember{},
@@ -151,7 +148,6 @@ func TestMain(m *testing.M) {
 	os.Exit(code)
 }
 
-// waitForServer checks if the server is ready by pinging the health endpoint
 func waitForServer(port string, maxRetries int, waitTime time.Duration) bool {
 	url := "http://localhost:" + port + "/health"
 

@@ -1,0 +1,93 @@
+name: Backend Tests
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    name: Run Backend Tests
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: flowboard_tests
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+
+      - name: Install dependencies
+        working-directory: ./backend
+        run: go mod download
+
+      - name: Create test environment file
+        working-directory: ./backend
+        run: |
+          cat > .env.test << EOF
+          ENV=test
+          DB_HOST=localhost
+          DB_PORT=5432
+          DB_USER=postgres
+          DB_PASSWORD=postgres
+          DB_NAME=flowboard_tests
+          PORT=8083
+          JWT_SECRET=test-secret-key-for-ci-cd-pipeline
+          EOF
+
+      - name: Run tests with detailed logging
+        working-directory: ./backend
+        env:
+          ENV: test
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_USER: postgres
+          DB_PASSWORD: postgres
+          DB_NAME: flowboard_tests
+          PORT: 8083
+          JWT_SECRET: test-secret-key-for-ci-cd-pipeline
+        run: |
+          go test ./tests/... -v -timeout 30s 2>&1 | tee test_output.log
+          TEST_EXIT_CODE=${PIPESTATUS[0]}
+          
+          if [ $TEST_EXIT_CODE -ne 0 ]; then
+            echo "================================"
+            echo "TESTS FAILED - Showing last 100 lines of output:"
+            echo "================================"
+            tail -100 test_output.log
+            echo "================================"
+            echo "SERVER LOG:"
+            echo "================================"
+            if [ -f server_test.log ]; then
+              cat server_test.log
+            fi
+            exit $TEST_EXIT_CODE
+          fi
+      
+      - name: Upload test output on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-output
+          path: |
+            backend/test_output.log
+            backend/server_test.log
+          if-no-files-found: ignore
