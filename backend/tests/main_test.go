@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"runtime"
 	"testing"
 	"time"
 
@@ -22,10 +23,8 @@ func TestMain(m *testing.M) {
 	// Load test environment
 	os.Setenv("ENV", "test")
 
-	// Change to backend directory to find .env.test
 	os.Chdir("..")
 
-	// Try to load .env.test file, but don't fail if it doesn't exist
 	if err := godotenv.Load(".env.test"); err != nil {
 		log.Println("No .env file found, using system environment variables")
 	}
@@ -38,7 +37,6 @@ func TestMain(m *testing.M) {
 		log.Fatal("Failed to connect to test database:", err)
 	}
 
-	// Auto-migrate tables FIRST before trying to clean them
 	log.Println("Running database migrations...")
 	database.DB.AutoMigrate(
 		&models.User{},
@@ -57,7 +55,6 @@ func TestMain(m *testing.M) {
 		&models.BoardMember{},
 	)
 
-	// NOW clean up old test data (after tables exist)
 	log.Println("Cleaning up old test data...")
 	database.DB.Exec("TRUNCATE TABLE activities CASCADE")
 	database.DB.Exec("TRUNCATE TABLE attachments CASCADE")
@@ -82,7 +79,6 @@ func TestMain(m *testing.M) {
 	// Start HTTP server as subprocess
 	log.Println("Starting HTTP server...")
 
-	// Create log file for server output
 	serverLogFile, err := os.Create("server_test.log")
 	if err != nil {
 		log.Fatal("Failed to create log file:", err)
@@ -92,17 +88,20 @@ func TestMain(m *testing.M) {
 		serverLogFile.Close()
 	}()
 
-	// Build the server binary first
 	log.Println("Building server binary...")
-	buildCmd := exec.Command("go", "build", "-o", "test_server", "./cmd/api")
+	binaryName := "test_server"
+	if runtime.GOOS == "windows" {
+		binaryName = "test_server.exe"
+	}
+
+	buildCmd := exec.Command("go", "build", "-o", binaryName, "./cmd/api")
 	buildCmd.Stdout = serverLogFile
 	buildCmd.Stderr = serverLogFile
 	if err := buildCmd.Run(); err != nil {
 		log.Fatal("Failed to build server:", err)
 	}
 
-	// Run the built binary
-	serverCmd = exec.Command("./test_server")
+	serverCmd = exec.Command("./" + binaryName)
 	serverCmd.Env = os.Environ()
 	serverCmd.Stdout = serverLogFile
 	serverCmd.Stderr = serverLogFile
@@ -111,7 +110,6 @@ func TestMain(m *testing.M) {
 		log.Fatal("Failed to start server:", err)
 	}
 
-	// Wait for server to be ready
 	log.Println("Waiting for server to be ready...")
 	if !waitForServer(cfg.Port, 5, 3*time.Second) {
 		log.Fatal("Server failed to start after 5 retries")
@@ -120,17 +118,14 @@ func TestMain(m *testing.M) {
 	log.Println("Server is ready!")
 	log.Println("Running tests...")
 
-	// Run all tests
 	code := m.Run()
 
-	// Cleanup after tests
 	log.Println("Cleaning up...")
 	if serverCmd != nil && serverCmd.Process != nil {
 		serverCmd.Process.Kill()
 		log.Println("Server stopped")
 	}
 
-	// Drop all tables in reverse order
 	log.Println("Rolling back migrations...")
 	database.DB.Migrator().DropTable(
 		&models.BoardMember{},
@@ -153,7 +148,6 @@ func TestMain(m *testing.M) {
 	os.Exit(code)
 }
 
-// waitForServer checks if the server is ready by pinging the health endpoint
 func waitForServer(port string, maxRetries int, waitTime time.Duration) bool {
 	url := "http://localhost:" + port + "/health"
 

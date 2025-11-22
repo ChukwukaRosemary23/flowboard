@@ -65,24 +65,29 @@ jobs:
           PORT: 8083
           JWT_SECRET: test-secret-key-for-ci-cd-pipeline
         run: |
-          go test ./tests/... -v -timeout 30s || {
+          go test ./tests/... -v -timeout 30s 2>&1 | tee test_output.log
+          TEST_EXIT_CODE=${PIPESTATUS[0]}
+          
+          if [ $TEST_EXIT_CODE -ne 0 ]; then
             echo "================================"
-            echo "TESTS FAILED - Checking server logs..."
+            echo "TESTS FAILED - Showing last 100 lines of output:"
+            echo "================================"
+            tail -100 test_output.log
+            echo "================================"
+            echo "SERVER LOG:"
             echo "================================"
             if [ -f server_test.log ]; then
-              echo "SERVER LOG CONTENTS:"
               cat server_test.log
-            else
-              echo "No server_test.log file found"
             fi
-            echo "================================"
-            exit 1
-          }
+            exit $TEST_EXIT_CODE
+          fi
       
-      - name: Upload server logs on failure
+      - name: Upload test output on failure
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: server-logs
-          path: backend/server_test.log
+          name: test-output
+          path: |
+            backend/test_output.log
+            backend/server_test.log
           if-no-files-found: ignore
