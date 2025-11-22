@@ -92,8 +92,17 @@ func TestMain(m *testing.M) {
 		serverLogFile.Close()
 	}()
 
-	serverCmd = exec.Command("go", "run", "cmd/api/main.go")
-	// Use environment variables instead of hardcoded values
+	// Build the server binary first
+	log.Println("Building server binary...")
+	buildCmd := exec.Command("go", "build", "-o", "test_server", "./cmd/api")
+	buildCmd.Stdout = serverLogFile
+	buildCmd.Stderr = serverLogFile
+	if err := buildCmd.Run(); err != nil {
+		log.Fatal("Failed to build server:", err)
+	}
+
+	// Run the built binary
+	serverCmd = exec.Command("./test_server")
 	serverCmd.Env = os.Environ()
 	serverCmd.Stdout = serverLogFile
 	serverCmd.Stderr = serverLogFile
