@@ -71,7 +71,9 @@ func main() {
 		MaxAge:           12 * time.Hour,
 	}))
 
-	// Health check route
+	// Health check routes
+	router.GET("/health", handlers.HealthCheck)
+
 	router.GET("/ping", func(c *gin.Context) {
 		c.JSON(200, gin.H{
 			"message": "pong",
@@ -93,7 +95,8 @@ func main() {
 	log.Printf(" Environment: %s\n", cfg.Env)
 	log.Println(" API Endpoints:")
 	log.Println("   Health Check:")
-	log.Println("     GET    /ping                         - Health check")
+	log.Println("     GET    /health                       - Health check (with DB)")
+	log.Println("     GET    /ping                         - Simple ping")
 	log.Println("   WebSocket:")
 	log.Println("     GET    /api/v1/ws?board_id=X         - WebSocket connection")
 	log.Println("   Auth:")
