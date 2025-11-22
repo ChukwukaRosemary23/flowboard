@@ -53,7 +53,7 @@ jobs:
           JWT_SECRET=test-secret-key-for-ci-cd-pipeline
           EOF
 
-      - name: Run tests
+      - name: Run tests with detailed logging
         working-directory: ./backend
         env:
           ENV: test
@@ -64,4 +64,25 @@ jobs:
           DB_NAME: flowboard_tests
           PORT: 8083
           JWT_SECRET: test-secret-key-for-ci-cd-pipeline
-        run: go test ./tests/... -v
+        run: |
+          go test ./tests/... -v -timeout 30s || {
+            echo "================================"
+            echo "TESTS FAILED - Checking server logs..."
+            echo "================================"
+            if [ -f server_test.log ]; then
+              echo "SERVER LOG CONTENTS:"
+              cat server_test.log
+            else
+              echo "No server_test.log file found"
+            fi
+            echo "================================"
+            exit 1
+          }
+      
+      - name: Upload server logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v3
+        with:
+          name: server-logs
+          path: backend/server_test.log
+          if-no-files-found: ignore
